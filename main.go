@@ -59,7 +59,7 @@ func main() {
 
 	fmt.Printf("Logged in to id.atlassian.com as '%s (%s)'...\n", currentUser.DisplayName, currentUser.AccountID)
 
-	space_to_export := "DRE"
+	space_to_export := "CORE"
 	pages, err := GetAllPagesInSpace(*api, space_to_export)
 	if err != nil {
 		log.Fatal(err)
