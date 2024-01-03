@@ -43,22 +43,31 @@ func main() {
 	}
 
 	id := "128385319"
-	c, err := GetOnePage(*api, id)
+	err = GetPageByIDThenStore(*api, id, &id_title_mapping)
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func GetPageByIDThenStore(api conf.API, id string, id_title_mapping *map[string]IdTitleSlug) error {
+	c, err := GetOnePage(api, id)
+	if err != nil {
+		return err
 	}
 
-	markdown, err := ConfluenceContentToMarkdown(c, &id_title_mapping)
+	markdown, err := ConfluenceContentToMarkdown(c, id_title_mapping)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	fmt.Println(markdown)
 
-	path, err := PagePath(*c, &id_title_mapping)
+	path, err := PagePath(*c, id_title_mapping)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	fmt.Printf("I want to write that page to: %s\n", path)
+	fmt.Printf("Writing page %s to: %s\n", c.ID, path)
+	WriteFileIntoRepo(path, markdown)
+
+	return nil
 }
 
 func GetOnePage(api conf.API, id string) (*conf.Content, error) {
@@ -228,10 +237,11 @@ func BuildIDTitleMapping(pages []conf.Content) (map[string]IdTitleSlug, error) {
 	return id_title_mapping, nil
 }
 
-func WriteFile(relativeFilename string, contents string) error {
+func WriteFileIntoRepo(relativeFilename string, contents string) error {
 	abs := path.Join(REPO_BASE, relativeFilename)
 	directory := path.Dir(abs)
-	err := os.MkdirAll(directory, os.ModeAppend)
+	// XXX there's probably a nicer way to express 0755 but meh
+	err := os.MkdirAll(directory, 0755)
 	if err != nil {
 		return err
 	}
