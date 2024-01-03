@@ -42,10 +42,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	id := "128385319"
-	err = GetPageByIDThenStore(*api, id, &id_title_mapping)
-	if err != nil {
-		log.Fatal(err)
+	for _, page := range pages {
+		err = GetPageByIDThenStore(*api, page.ID, &id_title_mapping)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -64,7 +65,7 @@ func GetPageByIDThenStore(api conf.API, id string, id_title_mapping *map[string]
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Writing page %s to: %s\n", c.ID, path)
+	fmt.Printf("Writing page %s to: %s...\n", c.ID, path)
 	WriteFileIntoRepo(path, markdown)
 
 	return nil
