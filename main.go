@@ -224,7 +224,6 @@ func BuildIDTitleMapping(pages []conf.Content) (map[string]IdTitleSlug, error) {
 	id_title_mapping := make(map[string]IdTitleSlug)
 
 	for _, page := range pages {
-		fmt.Printf(" - %s: %s\n", page.ID, page.Title)
 		slug, err := canonicalise(page.Title)
 		if err != nil {
 			return nil, err
