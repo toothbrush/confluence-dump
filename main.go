@@ -9,7 +9,7 @@ import (
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	md_plugin "github.com/JohannesKaufmann/html-to-markdown/plugin"
-	goconfluence "github.com/virtomize/confluence-go-api"
+	conf "github.com/virtomize/confluence-go-api"
 )
 
 func main() {
@@ -51,17 +51,17 @@ func main() {
 	fmt.Println(markdown)
 }
 
-func GetOnePage(api goconfluence.API, id string) (*goconfluence.Content, error) {
-	c, err := api.GetContentByID(id, goconfluence.ContentQuery{
+func GetOnePage(api conf.API, id string) (*conf.Content, error) {
+	c, err := api.GetContentByID(id, conf.ContentQuery{
 		Expand: []string{"ancestors", "body.view", "links", "version"},
 	})
 	if err != nil {
-		return &goconfluence.Content{}, err
+		return &conf.Content{}, err
 	}
 	return c, nil
 }
 
-func ConfluenceContentToMarkdown(content *goconfluence.Content, id_title_mapping *map[string]IdTitleSlug) (string, error) {
+func ConfluenceContentToMarkdown(content *conf.Content, id_title_mapping *map[string]IdTitleSlug) (string, error) {
 	converter := md.NewConverter("", true, nil)
 	// Github flavoured Markdown knows about tables 👍
 	converter.Use(md_plugin.GitHubFlavored())
@@ -118,9 +118,9 @@ ancestor_ids: %s
 	return body, nil
 }
 
-func PrintAllSpaces(api goconfluence.API) error {
+func PrintAllSpaces(api conf.API) error {
 	fmt.Printf("Listing Confluence spaces:\n\n")
-	spaces, err := api.GetAllSpaces(goconfluence.AllSpacesQuery{
+	spaces, err := api.GetAllSpaces(conf.AllSpacesQuery{
 		Type:  "global",
 		Start: 0,
 		Limit: 1000,
@@ -136,37 +136,37 @@ func PrintAllSpaces(api goconfluence.API) error {
 	return nil
 }
 
-func GiveMeAnAPIInstance() (*goconfluence.API, error) {
+func GiveMeAnAPIInstance() (*conf.API, error) {
 	token, err := exec.Command("pass", "confluence-api-token/paul.david@redbubble.com").Output()
 	if err != nil {
-		return &goconfluence.API{}, err
+		return &conf.API{}, err
 	}
 
 	token_lines := strings.Split(strings.TrimSuffix(string(token), "\n"), "\n")
 
 	// initialize a new api instance
-	api, err := goconfluence.NewAPI("https://redbubble.atlassian.net/wiki/rest/api", "paul.david@redbubble.com", token_lines[0])
+	api, err := conf.NewAPI("https://redbubble.atlassian.net/wiki/rest/api", "paul.david@redbubble.com", token_lines[0])
 	if err != nil {
-		return &goconfluence.API{}, err
+		return &conf.API{}, err
 	}
 
 	return api, nil
 }
 
-func GetAllPagesInSpace(api goconfluence.API, space string) ([]goconfluence.Content, error) {
+func GetAllPagesInSpace(api conf.API, space string) ([]conf.Content, error) {
 	//get content by space name
 	there_is_more := true
-	results := []goconfluence.Content{}
+	results := []conf.Content{}
 	var position int
 
 	position = 0
 	for there_is_more {
-		res, err := api.GetContent(goconfluence.ContentQuery{
+		res, err := api.GetContent(conf.ContentQuery{
 			SpaceKey: space,
 			Start:    position,
 		})
 		if err != nil {
-			return []goconfluence.Content{}, err
+			return []conf.Content{}, err
 		}
 		position += res.Size
 		fmt.Printf("Found %d items in %s\n", position, space)
@@ -195,7 +195,7 @@ type IdTitleSlug struct {
 	slug  string
 }
 
-func BuildIDTitleMapping(pages []goconfluence.Content) (map[string]IdTitleSlug, error) {
+func BuildIDTitleMapping(pages []conf.Content) (map[string]IdTitleSlug, error) {
 	id_title_mapping := make(map[string]IdTitleSlug)
 
 	for _, page := range pages {
