@@ -66,4 +66,11 @@ func main() {
 		results = append(results, res.Results...)
 		there_is_more = res.Size > 0
 	}
+	id := "128385319"
+	c, err := api.GetContentByID(id, goconfluence.ContentQuery{
+		Expand: []string{"body.view", "version"},
+	})
+	fmt.Printf("%+v\n", c)
+	fmt.Printf("%+v\n", c.Version)
+	fmt.Printf("%+v\n", c.Body.View)
 }
