@@ -66,7 +66,7 @@ func main() {
 	}
 
 	// build up id to title mapping, so that we can use it to determine the markdown output dir/filename.
-	id_title_mapping, err := BuildIDTitleMapping(pages)
+	id_title_mapping, err := BuildIDTitleMapping(pages, space_to_export)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -90,12 +90,7 @@ func GetPageByIDThenStore(api conf.API, id string, id_title_mapping *map[string]
 		return err
 	}
 
-	path, err := PagePath(*c, id_title_mapping)
-	if err != nil {
-		return err
-	}
-
-	if err = WriteFileIntoRepo(path, c.ID, markdown); err != nil {
+	if err = WriteFileIntoRepo(markdown); err != nil {
 		return fmt.Errorf("could not write to repo file: %w", err)
 	}
 
@@ -112,16 +107,20 @@ func GetOnePage(api conf.API, id string) (*conf.Content, error) {
 	return c, nil
 }
 
-func ConfluenceContentToMarkdown(content *conf.Content, id_title_mapping *map[string]IdTitleSlug) (string, error) {
+func ConfluenceContentToMarkdown(content *conf.Content, id_title_mapping *map[string]IdTitleSlug) (MarkdownOutput, error) {
 	converter := md.NewConverter("", true, nil)
 	// Github flavoured Markdown knows about tables 👍
 	converter.Use(md_plugin.GitHubFlavored())
 	markdown, err := converter.ConvertString(content.Body.View.Value)
 	if err != nil {
-		return "", err
+		return MarkdownOutput{}, err
 	}
 	link := content.Links.Base + content.Links.WebUI
 
+	// Are we able to set a base for all URLs?  Currently the Markdown has things like
+	// '/wiki/spaces/DRE/pages/2946695376/Tools+and+Infrastructure' which are a bit un ergonomic.
+	// we could (fancy mode) resolve to a link in the local dump or (grug mode) just add the
+	// https://redbubble.atlassian.net base URL.
 	ancestor_names := []string{}
 	ancestor_ids := []string{}
 	for _, ancestor := range content.Ancestors {
@@ -137,7 +136,7 @@ func ConfluenceContentToMarkdown(content *conf.Content, id_title_mapping *map[st
 			)
 		} else {
 			// oh no, found an ID with no title mapped!!
-			return "", fmt.Errorf("oh no, found an ID we haven't seen before! %s", ancestor.ID)
+			return MarkdownOutput{}, fmt.Errorf("oh no, found an ID we haven't seen before! %s", ancestor.ID)
 		}
 	}
 
@@ -166,7 +165,16 @@ ancestor_ids: %s
 		ancestor_ids_str,
 		markdown)
 
-	return body, nil
+	relativeOutputPath, err := PagePath(*content, id_title_mapping)
+	if err != nil {
+		return MarkdownOutput{}, fmt.Errorf("Hm, could not determine page path: %w", err)
+	}
+
+	return MarkdownOutput{
+		id:         content.ID,
+		content:    body,
+		outputPath: relativeOutputPath,
+	}, nil
 }
 
 func PrintAllSpaces(api conf.API) error {
@@ -250,11 +258,12 @@ func canonicalise(title string) (string, error) {
 }
 
 type IdTitleSlug struct {
-	title string
-	slug  string
+	title     string
+	slug      string
+	space_key string
 }
 
-func BuildIDTitleMapping(pages []conf.Content) (map[string]IdTitleSlug, error) {
+func BuildIDTitleMapping(pages []conf.Content, space_key string) (map[string]IdTitleSlug, error) {
 	id_title_mapping := make(map[string]IdTitleSlug)
 
 	for _, page := range pages {
@@ -263,15 +272,16 @@ func BuildIDTitleMapping(pages []conf.Content) (map[string]IdTitleSlug, error) {
 			return nil, err
 		}
 		id_title_mapping[page.ID] = IdTitleSlug{
-			title: page.Title,
-			slug:  slug,
+			title:     page.Title,
+			slug:      slug,
+			space_key: space_key,
 		}
 	}
 
 	return id_title_mapping, nil
 }
 
-func WriteFileIntoRepo(relativeFilename string, id string, contents string) error {
+func WriteFileIntoRepo(contents MarkdownOutput) error {
 	// Does REPO_BASE exist?
 	expanded_repo_base, err := homedir.Expand(REPO_BASE)
 	if err != nil {
@@ -288,10 +298,10 @@ func WriteFileIntoRepo(relativeFilename string, id string, contents string) erro
 	}
 
 	// construct destination path
-	abs := path.Join(expanded_repo_base, relativeFilename)
+	abs := path.Join(expanded_repo_base, contents.outputPath)
 	directory := path.Dir(abs)
 
-	fmt.Printf("Writing page %s to: %s...\n", id, path.Join(REPO_BASE, relativeFilename))
+	fmt.Printf("Writing page %s to: %s...\n", contents.id, path.Join(REPO_BASE, contents.outputPath))
 	// XXX there's probably a nicer way to express 0755 but meh
 	if err = os.MkdirAll(directory, 0755); err != nil {
 		return err
@@ -303,16 +313,16 @@ func WriteFileIntoRepo(relativeFilename string, id string, contents string) erro
 	}
 
 	defer f.Close()
-	f.WriteString(contents)
+	f.WriteString(contents.content)
 
 	return nil
 }
 
 func PagePath(page conf.Content, id_to_slug *map[string]IdTitleSlug) (string, error) {
 	path_parts := []string{}
+
 	for _, ancestor := range page.Ancestors {
-		ancestor_name, ok := (*id_to_slug)[ancestor.ID]
-		if ok {
+		if ancestor_name, ok := (*id_to_slug)[ancestor.ID]; ok {
 			path_parts = append(path_parts, ancestor_name.slug)
 		} else {
 			// oh no, found an ID with no title mapped!!
@@ -320,12 +330,19 @@ func PagePath(page conf.Content, id_to_slug *map[string]IdTitleSlug) (string, er
 		}
 	}
 
-	my_canonical_slug, err := canonicalise(page.Title)
-	if err != nil {
-		return "", err
+	if my_details, ok := (*id_to_slug)[page.ID]; ok {
+		path_parts = append([]string{my_details.space_key}, path_parts...)
+		path_parts = append(path_parts, fmt.Sprintf("%s.md", my_details.slug))
+	} else {
+		// oh no, our own ID isn't in the mapping?
+		return "", fmt.Errorf("oh no, couldn't retrieve page ID %s from mapping!", page.ID)
 	}
 
-	path_parts = append(path_parts, fmt.Sprintf("%s.md", my_canonical_slug))
-
 	return path.Join(path_parts...), nil
+}
+
+type MarkdownOutput struct {
+	content    string
+	id         string
+	outputPath string
 }
