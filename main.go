@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -13,6 +14,8 @@ import (
 	md_plugin "github.com/JohannesKaufmann/html-to-markdown/plugin"
 	"github.com/mitchellh/go-homedir"
 	conf "github.com/virtomize/confluence-go-api"
+	"gopkg.in/dnaeon/go-vcr.v3/cassette"
+	"gopkg.in/dnaeon/go-vcr.v3/recorder"
 )
 
 const REPO_BASE = "~/confluence"
@@ -23,13 +26,38 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// set up VCR recordings.
+	opts := &recorder.Options{
+		CassetteName:       "fixtures/confluence-stuff",
+		Mode:               recorder.ModeRecordOnce,
+		SkipRequestLatency: false,
+		RealTransport:      http.DefaultTransport,
+	}
+	r, err := recorder.NewWithOptions(opts)
+	if err != nil {
+		log.Fatal(fmt.Errorf("couldn't set up go-vcr recording: %w", err))
+	}
+
+	defer r.Stop() // Make sure recorder is stopped once done with it
+
+	// Add a hook which removes Authorization headers from all requests
+	hook := func(i *cassette.Interaction) error {
+		delete(i.Request.Headers, "Authorization")
+		return nil
+	}
+	r.AddHook(hook, recorder.AfterCaptureHook)
+	r.SetReplayableInteractions(true)
+
+	vcr_client := r.GetDefaultClient()
+	api.Client = vcr_client
+
 	// get current user information
 	currentUser, err := api.CurrentUser()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Logged in to id.atlassian.com as '%s (%s)'...\n", currentUser.DisplayName, currentUser.UserKey)
+	fmt.Printf("Logged in to id.atlassian.com as '%s (%s)'...\n", currentUser.DisplayName, currentUser.AccountID)
 
 	space_to_export := "DRE"
 	pages, err := GetAllPagesInSpace(*api, space_to_export)

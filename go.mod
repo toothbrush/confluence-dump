@@ -10,5 +10,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/virtomize/confluence-go-api v1.4.6 // indirect
 	golang.org/x/net v0.19.0 // indirect
+	gopkg.in/dnaeon/go-vcr.v3 v3.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
