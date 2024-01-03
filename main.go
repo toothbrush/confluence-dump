@@ -31,10 +31,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	some_page := pages[4]
-	fmt.Printf("%+v\n", some_page)
-	fmt.Printf("")
-
 	id := "128385319"
 	c, err := api.GetContentByID(id, goconfluence.ContentQuery{
 		Expand: []string{"body.view", "links", "version"},
