@@ -179,9 +179,14 @@ func GetAllPagesInSpace(api conf.API, space string) ([]conf.Content, error) {
 
 func canonicalise(title string) (string, error) {
 	str := regexp.MustCompile(`[^a-zA-Z0-9]+`).ReplaceAllString(title, " ")
-	str = strings.Trim(str, "-")
 	str = strings.ToLower(str)
 	str = strings.Join(strings.Fields(str), "-")
+
+	if len(str) > 101 {
+		str = str[:100]
+	}
+
+	str = strings.Trim(str, "-")
 
 	if len(str) < 2 {
 		return "", fmt.Errorf("Hm, slug ends up too short: '%s'", title)
