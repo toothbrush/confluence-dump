@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
+	md "github.com/JohannesKaufmann/html-to-markdown"
+	md_plugin "github.com/JohannesKaufmann/html-to-markdown/plugin"
 	goconfluence "github.com/virtomize/confluence-go-api"
 )
 
@@ -68,9 +70,48 @@ func main() {
 	}
 	id := "128385319"
 	c, err := api.GetContentByID(id, goconfluence.ContentQuery{
-		Expand: []string{"body.view", "version"},
+		Expand: []string{"body.view", "links", "version"},
 	})
-	fmt.Printf("%+v\n", c)
-	fmt.Printf("%+v\n", c.Version)
-	fmt.Printf("%+v\n", c.Body.View)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	markdown, err := ConfluenceContentToMarkdown(*c)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(markdown)
+}
+
+func ConfluenceContentToMarkdown(content goconfluence.Content) (string, error) {
+
+	converter := md.NewConverter("", true, nil)
+	// Github flavoured Markdown knows about tables 👍
+	converter.Use(md_plugin.GitHubFlavored())
+	markdown, err := converter.ConvertString(content.Body.View.Value)
+	if err != nil {
+		return "", err
+	}
+	link := content.Links.Base + content.Links.WebUI
+
+	body := fmt.Sprintf(`title: %s
+date: %s
+version: %d
+object_id: %s
+uri: %s
+status: %s
+type: %s
+---
+%s
+`,
+		content.Title,
+		content.Version.When,
+		content.Version.Number,
+		content.ID,
+		link,
+		content.Status,
+		content.Type,
+		markdown)
+
+	return body, nil
 }
