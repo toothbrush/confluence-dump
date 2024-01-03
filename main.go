@@ -94,8 +94,10 @@ func GetPageByIDThenStore(api conf.API, id string, id_title_mapping *map[string]
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Writing page %s to: %s...\n", c.ID, path)
-	WriteFileIntoRepo(path, markdown)
+
+	if err = WriteFileIntoRepo(path, c.ID, markdown); err != nil {
+		return fmt.Errorf("could not write to repo file: %w", err)
+	}
 
 	return nil
 }
@@ -269,7 +271,7 @@ func BuildIDTitleMapping(pages []conf.Content) (map[string]IdTitleSlug, error) {
 	return id_title_mapping, nil
 }
 
-func WriteFileIntoRepo(relativeFilename string, contents string) error {
+func WriteFileIntoRepo(relativeFilename string, id string, contents string) error {
 	// Does REPO_BASE exist?
 	expanded_repo_base, err := homedir.Expand(REPO_BASE)
 	if err != nil {
@@ -286,9 +288,10 @@ func WriteFileIntoRepo(relativeFilename string, contents string) error {
 	}
 
 	// construct destination path
-	abs := path.Join(REPO_BASE, relativeFilename)
+	abs := path.Join(expanded_repo_base, relativeFilename)
 	directory := path.Dir(abs)
 
+	fmt.Printf("Writing page %s to: %s...\n", id, path.Join(REPO_BASE, relativeFilename))
 	// XXX there's probably a nicer way to express 0755 but meh
 	if err = os.MkdirAll(directory, 0755); err != nil {
 		return err
