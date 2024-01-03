@@ -16,6 +16,8 @@ import (
 	conf "github.com/virtomize/confluence-go-api"
 	"gopkg.in/dnaeon/go-vcr.v3/cassette"
 	"gopkg.in/dnaeon/go-vcr.v3/recorder"
+
+	"github.com/toothbrush/confluence-dump/confluence_api"
 )
 
 const REPO_BASE = "~/confluence"
@@ -80,7 +82,7 @@ func main() {
 }
 
 func GetPageByIDThenStore(api conf.API, id string, id_title_mapping *map[string]IdTitleSlug) error {
-	c, err := GetOnePage(api, id)
+	c, err := confluence_api.RetrieveContentByID(api, id)
 	if err != nil {
 		return err
 	}
@@ -95,16 +97,6 @@ func GetPageByIDThenStore(api conf.API, id string, id_title_mapping *map[string]
 	}
 
 	return nil
-}
-
-func GetOnePage(api conf.API, id string) (*conf.Content, error) {
-	c, err := api.GetContentByID(id, conf.ContentQuery{
-		Expand: []string{"ancestors", "body.view", "links", "version"},
-	})
-	if err != nil {
-		return &conf.Content{}, err
-	}
-	return c, nil
 }
 
 func ConfluenceContentToMarkdown(content *conf.Content, id_title_mapping *map[string]IdTitleSlug) (MarkdownOutput, error) {
