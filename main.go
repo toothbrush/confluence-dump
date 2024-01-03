@@ -44,4 +44,26 @@ func main() {
 	for _, space := range spaces.Results {
 		fmt.Printf("  - %s: %s\n", space.Key, space.Name)
 	}
+
+	space_to_export := "DRE"
+
+	//get content by query
+	there_is_more := true
+	results := []goconfluence.Content{}
+	var position int
+
+	position = 0
+	for there_is_more {
+		res, err := api.GetContent(goconfluence.ContentQuery{
+			SpaceKey: space_to_export,
+			Start:    position,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		position += res.Size
+		fmt.Printf("Found %d items in %s\n", position, space_to_export)
+		results = append(results, res.Results...)
+		there_is_more = res.Size > 0
+	}
 }
