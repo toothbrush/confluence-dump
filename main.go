@@ -53,6 +53,12 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println(markdown)
+
+	path, err := PagePath(*c, &id_title_mapping)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("I want to write that page to: %s\n", path)
 }
 
 func GetOnePage(api conf.API, id string) (*conf.Content, error) {
@@ -238,4 +244,26 @@ func WriteFile(relativeFilename string, contents string) error {
 	f.WriteString(contents)
 
 	return nil
+}
+
+func PagePath(page conf.Content, id_to_slug *map[string]IdTitleSlug) (string, error) {
+	path_parts := []string{}
+	for _, ancestor := range page.Ancestors {
+		ancestor_name, ok := (*id_to_slug)[ancestor.ID]
+		if ok {
+			path_parts = append(path_parts, ancestor_name.slug)
+		} else {
+			// oh no, found an ID with no title mapped!!
+			return "", fmt.Errorf("oh no, found an ID we haven't seen before! %s", ancestor.ID)
+		}
+	}
+
+	my_canonical_slug, err := canonicalise(page.Title)
+	if err != nil {
+		return "", err
+	}
+
+	path_parts = append(path_parts, fmt.Sprintf("%s.md", my_canonical_slug))
+
+	return path.Join(path_parts...), nil
 }
