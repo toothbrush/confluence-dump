@@ -11,10 +11,11 @@ import (
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	md_plugin "github.com/JohannesKaufmann/html-to-markdown/plugin"
+	"github.com/mitchellh/go-homedir"
 	conf "github.com/virtomize/confluence-go-api"
 )
 
-const REPO_BASE = "./dump"
+const REPO_BASE = "~/confluence"
 
 func main() {
 	api, err := GiveMeAnAPIInstance()
@@ -28,7 +29,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Logged in to id.atlassian.com as '%s <%s>'...\n", currentUser.DisplayName, "..")
+	fmt.Printf("Logged in to id.atlassian.com as '%s (%s)'...\n", currentUser.DisplayName, currentUser.UserKey)
 
 	space_to_export := "DRE"
 	pages, err := GetAllPagesInSpace(*api, space_to_export)
@@ -157,15 +158,15 @@ func PrintAllSpaces(api conf.API) error {
 }
 
 func GiveMeAnAPIInstance() (*conf.API, error) {
-	token, err := exec.Command("pass", "confluence-api-token/paul.david@redbubble.com").Output()
+	token_cmd_output, err := exec.Command("pass", "confluence-api-token/paul.david@redbubble.com").Output()
 	if err != nil {
 		return &conf.API{}, err
 	}
 
-	token_lines := strings.Split(strings.TrimSuffix(string(token), "\n"), "\n")
+	token := strings.Split(string(token_cmd_output), "\n")[0]
 
 	// initialize a new api instance
-	api, err := conf.NewAPI("https://redbubble.atlassian.net/wiki/rest/api", "paul.david@redbubble.com", token_lines[0])
+	api, err := conf.NewAPI("https://redbubble.atlassian.net/wiki/rest/api", "paul.david@redbubble.com", token)
 	if err != nil {
 		return &conf.API{}, err
 	}
@@ -189,9 +190,11 @@ func GetAllPagesInSpace(api conf.API, space string) ([]conf.Content, error) {
 			return []conf.Content{}, err
 		}
 		position += res.Size
-		fmt.Printf("Found %d items in %s\n", position, space)
-		results = append(results, res.Results...)
 		there_is_more = res.Size > 0
+		if there_is_more {
+			results = append(results, res.Results...)
+			fmt.Printf("Found %d items in %s\n", position, space)
+		}
 	}
 
 	return results, nil
@@ -238,18 +241,35 @@ func BuildIDTitleMapping(pages []conf.Content) (map[string]IdTitleSlug, error) {
 }
 
 func WriteFileIntoRepo(relativeFilename string, contents string) error {
+	// Does REPO_BASE exist?
+	expanded_repo_base, err := homedir.Expand(REPO_BASE)
+	if err != nil {
+		return fmt.Errorf("Couldn't expand homedir from %s: %w", REPO_BASE, err)
+	}
+	stat, err := os.Stat(expanded_repo_base)
+	if err != nil {
+		return fmt.Errorf("Error with stat'ing %s: %w", expanded_repo_base, err)
+	}
+
+	if !stat.IsDir() {
+		// path is not a directory.  this is bad, we should bail
+		return fmt.Errorf("REPO_BASE does not seem to be a directory.  Bailing.")
+	}
+
+	// construct destination path
 	abs := path.Join(REPO_BASE, relativeFilename)
 	directory := path.Dir(abs)
+
 	// XXX there's probably a nicer way to express 0755 but meh
-	err := os.MkdirAll(directory, 0755)
-	if err != nil {
+	if err = os.MkdirAll(directory, 0755); err != nil {
 		return err
 	}
 
 	f, err := os.Create(abs)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create file %s: %w", abs, err)
 	}
+
 	defer f.Close()
 	f.WriteString(contents)
 
