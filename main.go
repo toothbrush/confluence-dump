@@ -202,6 +202,7 @@ func GiveMeAnAPIInstance() (*conf.API, error) {
 	return api, nil
 }
 
+// XXX Hmm this is a deprecated API?
 func GetAllPagesInSpace(api conf.API, space string) ([]conf.Content, error) {
 	//get content by space name
 	there_is_more := true
