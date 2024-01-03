@@ -12,15 +12,7 @@ import (
 )
 
 func main() {
-	token, err := exec.Command("pass", "confluence-api-token/paul.david@redbubble.com").Output()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	token_lines := strings.Split(strings.TrimSuffix(string(token), "\n"), "\n")
-
-	// initialize a new api instance
-	api, err := goconfluence.NewAPI("https://redbubble.atlassian.net/wiki/rest/api", "paul.david@redbubble.com", token_lines[0])
+	api, err := GiveMeAnAPIInstance()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -33,41 +25,16 @@ func main() {
 
 	fmt.Printf("Logged in to id.atlassian.com as '%s <%s>'...\n", currentUser.DisplayName, "..")
 
-	fmt.Printf("Listing Confluence spaces:\n\n")
-	spaces, err := api.GetAllSpaces(goconfluence.AllSpacesQuery{
-		Type:  "global",
-		Start: 0,
-		Limit: 1000,
-	})
+	space_to_export := "DRE"
+	pages, err := GetAllPagesInSpace(*api, space_to_export)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for _, space := range spaces.Results {
-		fmt.Printf("  - %s: %s\n", space.Key, space.Name)
-	}
+	some_page := pages[4]
+	fmt.Printf("%+v\n", some_page)
+	fmt.Printf("")
 
-	space_to_export := "DRE"
-
-	//get content by query
-	there_is_more := true
-	results := []goconfluence.Content{}
-	var position int
-
-	position = 0
-	for there_is_more {
-		res, err := api.GetContent(goconfluence.ContentQuery{
-			SpaceKey: space_to_export,
-			Start:    position,
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-		position += res.Size
-		fmt.Printf("Found %d items in %s\n", position, space_to_export)
-		results = append(results, res.Results...)
-		there_is_more = res.Size > 0
-	}
 	id := "128385319"
 	c, err := api.GetContentByID(id, goconfluence.ContentQuery{
 		Expand: []string{"body.view", "links", "version"},
@@ -114,4 +81,63 @@ type: %s
 		markdown)
 
 	return body, nil
+}
+
+func PrintAllSpaces(api goconfluence.API) error {
+	fmt.Printf("Listing Confluence spaces:\n\n")
+	spaces, err := api.GetAllSpaces(goconfluence.AllSpacesQuery{
+		Type:  "global",
+		Start: 0,
+		Limit: 1000,
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, space := range spaces.Results {
+		fmt.Printf("  - %s: %s\n", space.Key, space.Name)
+	}
+
+	return nil
+}
+
+func GiveMeAnAPIInstance() (*goconfluence.API, error) {
+	token, err := exec.Command("pass", "confluence-api-token/paul.david@redbubble.com").Output()
+	if err != nil {
+		return &goconfluence.API{}, err
+	}
+
+	token_lines := strings.Split(strings.TrimSuffix(string(token), "\n"), "\n")
+
+	// initialize a new api instance
+	api, err := goconfluence.NewAPI("https://redbubble.atlassian.net/wiki/rest/api", "paul.david@redbubble.com", token_lines[0])
+	if err != nil {
+		return &goconfluence.API{}, err
+	}
+
+	return api, nil
+}
+
+func GetAllPagesInSpace(api goconfluence.API, space string) ([]goconfluence.Content, error) {
+	//get content by space name
+	there_is_more := true
+	results := []goconfluence.Content{}
+	var position int
+
+	position = 0
+	for there_is_more {
+		res, err := api.GetContent(goconfluence.ContentQuery{
+			SpaceKey: space,
+			Start:    position,
+		})
+		if err != nil {
+			return []goconfluence.Content{}, err
+		}
+		position += res.Size
+		fmt.Printf("Found %d items in %s\n", position, space)
+		results = append(results, res.Results...)
+		there_is_more = res.Size > 0
+	}
+
+	return results, nil
 }
