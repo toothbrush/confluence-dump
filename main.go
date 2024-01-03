@@ -30,7 +30,7 @@ func main() {
 	opts := &recorder.Options{
 		CassetteName:       "fixtures/confluence-stuff",
 		Mode:               recorder.ModeRecordOnce,
-		SkipRequestLatency: false,
+		SkipRequestLatency: true,
 		RealTransport:      http.DefaultTransport,
 	}
 	r, err := recorder.NewWithOptions(opts)
