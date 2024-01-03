@@ -29,5 +29,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("%+v\n", currentUser)
+	fmt.Printf("Logged in to id.atlassian.com as '%s <%s>'...\n", currentUser.DisplayName, "..")
+
+	fmt.Printf("Listing Confluence spaces:\n\n")
+	spaces, err := api.GetAllSpaces(goconfluence.AllSpacesQuery{
+		Type:  "global",
+		Start: 0,
+		Limit: 1000,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, space := range spaces.Results {
+		fmt.Printf("  - %s: %s\n", space.Key, space.Name)
+	}
 }
