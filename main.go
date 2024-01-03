@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
+	"path"
 	"regexp"
 	"strings"
 
@@ -11,6 +13,8 @@ import (
 	md_plugin "github.com/JohannesKaufmann/html-to-markdown/plugin"
 	conf "github.com/virtomize/confluence-go-api"
 )
+
+const REPO_BASE = "./dump"
 
 func main() {
 	api, err := GiveMeAnAPIInstance()
@@ -216,4 +220,22 @@ func BuildIDTitleMapping(pages []conf.Content) (map[string]IdTitleSlug, error) {
 	}
 
 	return id_title_mapping, nil
+}
+
+func WriteFile(relativeFilename string, contents string) error {
+	abs := path.Join(REPO_BASE, relativeFilename)
+	directory := path.Dir(abs)
+	err := os.MkdirAll(directory, os.ModeAppend)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(abs)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	f.WriteString(contents)
+
+	return nil
 }
