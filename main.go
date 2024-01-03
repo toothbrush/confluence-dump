@@ -32,22 +32,29 @@ func main() {
 	}
 
 	id := "128385319"
-	c, err := api.GetContentByID(id, goconfluence.ContentQuery{
-		Expand: []string{"body.view", "links", "version"},
-	})
+	c, err := GetOnePage(*api, id)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	markdown, err := ConfluenceContentToMarkdown(*c)
+	markdown, err := ConfluenceContentToMarkdown(c)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(markdown)
 }
 
-func ConfluenceContentToMarkdown(content goconfluence.Content) (string, error) {
+func GetOnePage(api goconfluence.API, id string) (*goconfluence.Content, error) {
+	c, err := api.GetContentByID(id, goconfluence.ContentQuery{
+		Expand: []string{"ancestors", "body.view", "links", "version"},
+	})
+	if err != nil {
+		return &goconfluence.Content{}, err
+	}
+	return c, nil
+}
 
+func ConfluenceContentToMarkdown(content *goconfluence.Content) (string, error) {
 	converter := md.NewConverter("", true, nil)
 	// Github flavoured Markdown knows about tables 👍
 	converter.Use(md_plugin.GitHubFlavored())
