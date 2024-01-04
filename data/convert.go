@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	md_plugin "github.com/JohannesKaufmann/html-to-markdown/plugin"
@@ -47,9 +48,14 @@ func ConvertToMarkdown(content *conf.Content, metadata_cache MetadataCache) (Loc
 		return LocalMarkdown{}, fmt.Errorf("data: Object ID %s not an int: %w", content.ID, err)
 	}
 
+	timestamp, err := time.Parse(time.RFC3339, content.Version.When)
+	if err != nil {
+		return LocalMarkdown{}, fmt.Errorf("data: Couldn't parse timestamp %s: %w", content.Version.When, err)
+	}
+
 	header := MarkdownHeader{
 		Title:         content.Title,
-		Date:          content.Version.When,
+		Timestamp:     timestamp,
 		Version:       content.Version.Number,
 		ObjectId:      id,
 		Uri:           item_web_uri,
@@ -153,7 +159,7 @@ func safeParseFieldToString(fieldname string, metadata map[string]interface{}) (
 
 type MarkdownHeader struct {
 	Title         string
-	Date          string // eventually: time.Time
+	Timestamp     time.Time
 	Version       int
 	ObjectId      int `yaml:"object_id"`
 	Uri           string
