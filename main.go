@@ -5,10 +5,8 @@ import (
 	"log"
 	"net/http"
 	"os/exec"
-	"regexp"
 	"strings"
 
-	conf "github.com/virtomize/confluence-go-api"
 	"gopkg.in/dnaeon/go-vcr.v3/cassette"
 	"gopkg.in/dnaeon/go-vcr.v3/recorder"
 
@@ -86,7 +84,7 @@ func main() {
 	}
 
 	// build up id to title mapping, so that we can use it to determine the markdown output dir/filename.
-	id_title_mapping, err := BuildIDTitleMapping(pages, space_to_export)
+	title_cache, err := data.BuildCacheFromPagelist(pages, space_to_export)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -97,7 +95,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		markdown, err := data.ConvertToMarkdown(c, id_title_mapping)
+		markdown, err := data.ConvertToMarkdown(c, title_cache)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -106,40 +104,4 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-}
-
-func canonicalise(title string) (string, error) {
-	str := regexp.MustCompile(`[^a-zA-Z0-9]+`).ReplaceAllString(title, " ")
-	str = strings.ToLower(str)
-	str = strings.Join(strings.Fields(str), "-")
-
-	if len(str) > 101 {
-		str = str[:100]
-	}
-
-	str = strings.Trim(str, "-")
-
-	if len(str) < 2 {
-		return "", fmt.Errorf("Hm, slug ends up too short: '%s'", title)
-	}
-
-	return str, nil
-}
-
-func BuildIDTitleMapping(pages []conf.Content, space_key string) (data.MetadataCache, error) {
-	id_title_mapping := make(data.MetadataCache)
-
-	for _, page := range pages {
-		slug, err := canonicalise(page.Title)
-		if err != nil {
-			return nil, err
-		}
-		id_title_mapping[page.ID] = data.LocalMetadata{
-			Title:    page.Title,
-			Slug:     slug,
-			SpaceKey: space_key,
-		}
-	}
-
-	return id_title_mapping, nil
 }
