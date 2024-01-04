@@ -208,12 +208,6 @@ func canonicalise(title string) (string, error) {
 	return str, nil
 }
 
-type IdTitleSlug struct {
-	title     string
-	slug      string
-	space_key string
-}
-
 func BuildIDTitleMapping(pages []conf.Content, space_key string) (map[string]IdTitleSlug, error) {
 	id_title_mapping := make(map[string]IdTitleSlug)
 
