@@ -39,6 +39,32 @@ func ParseExistingMarkdown(storePath string, relativePath string) (data.LocalMar
 	}, nil
 }
 
+func LoadLocalMarkdown(storePath string) (data.LocalMarkdownLookup, error) {
+	// find files
+	filenames, err := ListAllMarkdownFiles(storePath)
+	if err != nil {
+		return data.LocalMarkdownLookup{}, fmt.Errorf("local_dump: Error loading Markdown files: %w", err)
+	}
+
+	local_markdown := data.LocalMarkdownLookup{}
+	// parse each file
+	for _, file := range filenames {
+		rel, err := filepath.Rel(storePath, file)
+		if err != nil {
+			return data.LocalMarkdownLookup{}, fmt.Errorf("local_dump: Couldn't compute relative path of %s: %w", file, err)
+		}
+
+		md, err := ParseExistingMarkdown(storePath, rel)
+		if err != nil {
+			return data.LocalMarkdownLookup{}, fmt.Errorf("local_dump: Couldn't load local Markdown file %s: %w", file, err)
+		}
+
+		local_markdown[md.ID] = md
+	}
+
+	return local_markdown, nil
+}
+
 func ListAllMarkdownFiles(storePath string) ([]string, error) {
 	filenames := []string{}
 	err := filepath.Walk(storePath,

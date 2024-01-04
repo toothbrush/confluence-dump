@@ -16,11 +16,14 @@ type LocalMarkdown struct {
 // i might want to rename this, because it's meh, but this guy is what we build up based on the info
 // retrieved from Confluence.  we don't want to repeat requests, so once we've 'seen' an ID, we keep
 // some information about it that other pages might need, like titles, for ancestry info.
-type MetadataCache map[string]LocalMetadata
+type MetadataCache map[string]RemoteObjectMetadata
 
-type LocalMetadata struct {
+type RemoteObjectMetadata struct {
 	ID       string
 	Title    string
 	Slug     string
 	SpaceKey string
+	Version  int
 }
+
+type LocalMarkdownLookup map[string]LocalMarkdown

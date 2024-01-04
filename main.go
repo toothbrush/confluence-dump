@@ -31,8 +31,10 @@ func main() {
 
 	token := strings.Split(string(token_cmd_output), "\n")[0]
 
-	local_dump.LoadLocalMarkdown(storePath)
-	return
+	local_markdown, err := local_dump.LoadLocalMarkdown(storePath)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	api, err := confluence_api.GetConfluenceAPI(
 		"redbubble",
@@ -93,18 +95,22 @@ func main() {
 	}
 
 	// build up id to title mapping, so that we can use it to determine the markdown output dir/filename.
-	title_cache, err := data.BuildCacheFromPagelist(pages, space_to_export)
+	remote_title_cache, err := data.BuildCacheFromPagelist(pages, space_to_export)
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Printf("Found %d pages on remote...\n", len(remote_title_cache))
 
-	for _, page := range pages {
-		c, err := confluence_api.RetrieveContentByID(*api, page.ID)
+	pages_to_download := local_dump.ChangedPages(remote_title_cache, local_markdown)
+	fmt.Printf("Found %d updated pages to download...\n", len(pages_to_download))
+
+	for _, page := range pages_to_download {
+		c, err := confluence_api.RetrieveContentByID(*api, page)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		markdown, err := data.ConvertToMarkdown(c, title_cache)
+		markdown, err := data.ConvertToMarkdown(c, remote_title_cache)
 		if err != nil {
 			log.Fatal(err)
 		}

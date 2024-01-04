@@ -18,6 +18,7 @@ func GetAllPagesInSpace(api conf.API, space string) ([]conf.Content, error) {
 		res, err := api.GetContent(conf.ContentQuery{
 			SpaceKey: space,
 			Start:    position,
+			Expand:   []string{"version"},
 		})
 		if err != nil {
 			return []conf.Content{}, fmt.Errorf("confluence_api: couldn't retrieve list of contents: %w", err)
