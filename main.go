@@ -5,12 +5,9 @@ import (
 	"log"
 	"net/http"
 	"os/exec"
-	"path"
 	"regexp"
 	"strings"
 
-	md "github.com/JohannesKaufmann/html-to-markdown"
-	md_plugin "github.com/JohannesKaufmann/html-to-markdown/plugin"
 	conf "github.com/virtomize/confluence-go-api"
 	"gopkg.in/dnaeon/go-vcr.v3/cassette"
 	"gopkg.in/dnaeon/go-vcr.v3/recorder"
@@ -95,20 +92,20 @@ func main() {
 	}
 
 	for _, page := range pages {
-		err = GetPageByIDThenStore(*api, page.ID, &id_title_mapping)
+		err = GetPageByIDThenStore(*api, page.ID, id_title_mapping)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 }
 
-func GetPageByIDThenStore(api conf.API, id string, id_title_mapping *map[string]IdTitleSlug) error {
+func GetPageByIDThenStore(api conf.API, id string, id_title_mapping data.MetadataCache) error {
 	c, err := confluence_api.RetrieveContentByID(api, id)
 	if err != nil {
 		return err
 	}
 
-	markdown, err := ConfluenceContentToMarkdown(c, id_title_mapping)
+	markdown, err := data.ConvertToMarkdown(c, id_title_mapping)
 	if err != nil {
 		return err
 	}
@@ -118,76 +115,6 @@ func GetPageByIDThenStore(api conf.API, id string, id_title_mapping *map[string]
 	}
 
 	return nil
-}
-
-func ConfluenceContentToMarkdown(content *conf.Content, id_title_mapping *map[string]IdTitleSlug) (data.LocalMarkdown, error) {
-	converter := md.NewConverter("", true, nil)
-	// Github flavoured Markdown knows about tables 👍
-	converter.Use(md_plugin.GitHubFlavored())
-	markdown, err := converter.ConvertString(content.Body.View.Value)
-	if err != nil {
-		return data.LocalMarkdown{}, err
-	}
-	link := content.Links.Base + content.Links.WebUI
-
-	// Are we able to set a base for all URLs?  Currently the Markdown has things like
-	// '/wiki/spaces/DRE/pages/2946695376/Tools+and+Infrastructure' which are a bit un ergonomic.
-	// we could (fancy mode) resolve to a link in the local dump or (grug mode) just add the
-	// https://redbubble.atlassian.net base URL.
-	ancestor_names := []string{}
-	ancestor_ids := []string{}
-	for _, ancestor := range content.Ancestors {
-		ancestor_name, ok := (*id_title_mapping)[ancestor.ID]
-		if ok {
-			ancestor_names = append(
-				ancestor_names,
-				fmt.Sprintf("\"%s\"", ancestor_name.title),
-			)
-			ancestor_ids = append(
-				ancestor_ids,
-				ancestor.ID,
-			)
-		} else {
-			// oh no, found an ID with no title mapped!!
-			return data.LocalMarkdown{}, fmt.Errorf("oh no, found an ID we haven't seen before! %s", ancestor.ID)
-		}
-	}
-
-	ancestor_ids_str := fmt.Sprintf("[%s]", strings.Join(ancestor_ids, ", "))
-
-	body := fmt.Sprintf(`title: %s
-date: %s
-version: %d
-object_id: %s
-uri: %s
-status: %s
-type: %s
-ancestor_names: %s
-ancestor_ids: %s
----
-%s
-`,
-		content.Title,
-		content.Version.When,
-		content.Version.Number,
-		content.ID,
-		link,
-		content.Status,
-		content.Type,
-		strings.Join(ancestor_names, " > "),
-		ancestor_ids_str,
-		markdown)
-
-	relativeOutputPath, err := PagePath(*content, id_title_mapping)
-	if err != nil {
-		return data.LocalMarkdown{}, fmt.Errorf("Hm, could not determine page path: %w", err)
-	}
-
-	return data.LocalMarkdown{
-		ID:           content.ID,
-		Content:      body,
-		RelativePath: relativeOutputPath,
-	}, nil
 }
 
 func canonicalise(title string) (string, error) {
@@ -208,18 +135,18 @@ func canonicalise(title string) (string, error) {
 	return str, nil
 }
 
-func BuildIDTitleMapping(pages []conf.Content, space_key string) (map[string]IdTitleSlug, error) {
-	id_title_mapping := make(map[string]IdTitleSlug)
+func BuildIDTitleMapping(pages []conf.Content, space_key string) (data.MetadataCache, error) {
+	id_title_mapping := make(data.MetadataCache)
 
 	for _, page := range pages {
 		slug, err := canonicalise(page.Title)
 		if err != nil {
 			return nil, err
 		}
-		id_title_mapping[page.ID] = IdTitleSlug{
-			title:     page.Title,
-			slug:      slug,
-			space_key: space_key,
+		id_title_mapping[page.ID] = data.LocalMetadata{
+			Title:    page.Title,
+			Slug:     slug,
+			SpaceKey: space_key,
 		}
 	}
 
