@@ -16,6 +16,9 @@ func ConvertToMarkdown(content *conf.Content, metadata_cache MetadataCache) (Loc
 	converter := md.NewConverter("", true, nil)
 	// Github flavoured Markdown knows about tables 👍
 	converter.Use(md_plugin.GitHubFlavored())
+	if content.Body.View == nil {
+		return LocalMarkdown{}, fmt.Errorf("data: Found nil .Body.View field for Object ID %s", content.ID)
+	}
 	markdown, err := converter.ConvertString(content.Body.View.Value)
 	if err != nil {
 		return LocalMarkdown{}, fmt.Errorf("data: Failed to convert to Markdown: %w", err)
@@ -46,6 +49,9 @@ func ConvertToMarkdown(content *conf.Content, metadata_cache MetadataCache) (Loc
 	id, err := strconv.Atoi(content.ID)
 	if err != nil {
 		return LocalMarkdown{}, fmt.Errorf("data: Object ID %s not an int: %w", content.ID, err)
+	}
+	if content.Version == nil {
+		return LocalMarkdown{}, fmt.Errorf("data: Found nil .Version field for Object ID %s", content.ID)
 	}
 
 	timestamp, err := time.Parse(time.RFC3339, content.Version.When)

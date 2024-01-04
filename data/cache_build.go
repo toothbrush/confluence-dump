@@ -34,6 +34,9 @@ func BuildCacheFromPagelist(pages []conf.Content, space_key string) (MetadataCac
 		if err != nil {
 			return nil, fmt.Errorf("data: Couldn't derive slug: %w", err)
 		}
+		if page.Version == nil {
+			return nil, fmt.Errorf("data: Found nil .Version field for Object ID %s", page.ID)
+		}
 		id_title_mapping[page.ID] = RemoteObjectMetadata{
 			ID:       page.ID,
 			Title:    page.Title,
