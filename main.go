@@ -41,7 +41,7 @@ func main() {
 	// set up VCR recordings.
 	opts := &recorder.Options{
 		CassetteName:       "fixtures/confluence-stuff",
-		Mode:               recorder.ModeRecordOnce,
+		Mode:               recorder.ModeReplayWithNewEpisodes,
 		SkipRequestLatency: true,
 		RealTransport:      http.DefaultTransport,
 	}
