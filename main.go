@@ -23,7 +23,17 @@ import (
 const REPO_BASE = "~/confluence"
 
 func main() {
-	api, err := GiveMeAnAPIInstance()
+	token_cmd_output, err := exec.Command("pass", "confluence-api-token/paul.david@redbubble.com").Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	token := strings.Split(string(token_cmd_output), "\n")[0]
+
+	api, err := confluence_api.GetConfluenceAPI(
+		"redbubble",
+		"paul.david@redbubble.com",
+		token)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -185,23 +195,6 @@ func PrintAllSpaces(api conf.API) error {
 	}
 
 	return nil
-}
-
-func GiveMeAnAPIInstance() (*conf.API, error) {
-	token_cmd_output, err := exec.Command("pass", "confluence-api-token/paul.david@redbubble.com").Output()
-	if err != nil {
-		return &conf.API{}, err
-	}
-
-	token := strings.Split(string(token_cmd_output), "\n")[0]
-
-	// initialize a new api instance
-	api, err := conf.NewAPI("https://redbubble.atlassian.net/wiki/rest/api", "paul.david@redbubble.com", token)
-	if err != nil {
-		return &conf.API{}, err
-	}
-
-	return api, nil
 }
 
 // XXX Hmm this is a deprecated API?
