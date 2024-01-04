@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"os/exec"
 	"path"
 	"regexp"
@@ -12,12 +11,13 @@ import (
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	md_plugin "github.com/JohannesKaufmann/html-to-markdown/plugin"
-	"github.com/mitchellh/go-homedir"
 	conf "github.com/virtomize/confluence-go-api"
 	"gopkg.in/dnaeon/go-vcr.v3/cassette"
 	"gopkg.in/dnaeon/go-vcr.v3/recorder"
 
 	"github.com/toothbrush/confluence-dump/confluence_api"
+	"github.com/toothbrush/confluence-dump/data"
+	"github.com/toothbrush/confluence-dump/local_dump"
 )
 
 const REPO_BASE = "~/confluence"
@@ -113,20 +113,20 @@ func GetPageByIDThenStore(api conf.API, id string, id_title_mapping *map[string]
 		return err
 	}
 
-	if err = WriteFileIntoRepo(markdown); err != nil {
+	if err = local_dump.WriteMarkdownIntoLocal(markdown); err != nil {
 		return fmt.Errorf("could not write to repo file: %w", err)
 	}
 
 	return nil
 }
 
-func ConfluenceContentToMarkdown(content *conf.Content, id_title_mapping *map[string]IdTitleSlug) (MarkdownOutput, error) {
+func ConfluenceContentToMarkdown(content *conf.Content, id_title_mapping *map[string]IdTitleSlug) (data.LocalMarkdown, error) {
 	converter := md.NewConverter("", true, nil)
 	// Github flavoured Markdown knows about tables 👍
 	converter.Use(md_plugin.GitHubFlavored())
 	markdown, err := converter.ConvertString(content.Body.View.Value)
 	if err != nil {
-		return MarkdownOutput{}, err
+		return data.LocalMarkdown{}, err
 	}
 	link := content.Links.Base + content.Links.WebUI
 
@@ -149,7 +149,7 @@ func ConfluenceContentToMarkdown(content *conf.Content, id_title_mapping *map[st
 			)
 		} else {
 			// oh no, found an ID with no title mapped!!
-			return MarkdownOutput{}, fmt.Errorf("oh no, found an ID we haven't seen before! %s", ancestor.ID)
+			return data.LocalMarkdown{}, fmt.Errorf("oh no, found an ID we haven't seen before! %s", ancestor.ID)
 		}
 	}
 
@@ -180,13 +180,13 @@ ancestor_ids: %s
 
 	relativeOutputPath, err := PagePath(*content, id_title_mapping)
 	if err != nil {
-		return MarkdownOutput{}, fmt.Errorf("Hm, could not determine page path: %w", err)
+		return data.LocalMarkdown{}, fmt.Errorf("Hm, could not determine page path: %w", err)
 	}
 
-	return MarkdownOutput{
-		id:         content.ID,
-		content:    body,
-		outputPath: relativeOutputPath,
+	return data.LocalMarkdown{
+		ID:           content.ID,
+		Content:      body,
+		RelativePath: relativeOutputPath,
 	}, nil
 }
 
@@ -232,43 +232,6 @@ func BuildIDTitleMapping(pages []conf.Content, space_key string) (map[string]IdT
 	return id_title_mapping, nil
 }
 
-func WriteFileIntoRepo(contents MarkdownOutput) error {
-	// Does REPO_BASE exist?
-	expanded_repo_base, err := homedir.Expand(REPO_BASE)
-	if err != nil {
-		return fmt.Errorf("Couldn't expand homedir from %s: %w", REPO_BASE, err)
-	}
-	stat, err := os.Stat(expanded_repo_base)
-	if err != nil {
-		return fmt.Errorf("Error with stat'ing %s: %w", expanded_repo_base, err)
-	}
-
-	if !stat.IsDir() {
-		// path is not a directory.  this is bad, we should bail
-		return fmt.Errorf("REPO_BASE does not seem to be a directory.  Bailing.")
-	}
-
-	// construct destination path
-	abs := path.Join(expanded_repo_base, contents.outputPath)
-	directory := path.Dir(abs)
-
-	fmt.Printf("Writing page %s to: %s...\n", contents.id, path.Join(REPO_BASE, contents.outputPath))
-	// XXX there's probably a nicer way to express 0755 but meh
-	if err = os.MkdirAll(directory, 0755); err != nil {
-		return err
-	}
-
-	f, err := os.Create(abs)
-	if err != nil {
-		return fmt.Errorf("could not create file %s: %w", abs, err)
-	}
-
-	defer f.Close()
-	f.WriteString(contents.content)
-
-	return nil
-}
-
 func PagePath(page conf.Content, id_to_slug *map[string]IdTitleSlug) (string, error) {
 	path_parts := []string{}
 
@@ -290,10 +253,4 @@ func PagePath(page conf.Content, id_to_slug *map[string]IdTitleSlug) (string, er
 	}
 
 	return path.Join(path_parts...), nil
-}
-
-type MarkdownOutput struct {
-	content    string
-	id         string
-	outputPath string
 }
