@@ -71,6 +71,7 @@ func main() {
 
 	fmt.Printf("Logged in to id.atlassian.com as '%s (%s)'...\n", currentUser.DisplayName, currentUser.AccountID)
 
+	// list all spaces
 	spaces, err := confluence_api.ListAllSpaces(*api)
 	if err != nil {
 		log.Fatal(err)
@@ -80,8 +81,9 @@ func main() {
 		fmt.Printf("  - %s: %s\n", space.Key, space.Name)
 	}
 
+	// grab a list of pages from given space
 	space_to_export := "CORE"
-	pages, err := GetAllPagesInSpace(*api, space_to_export)
+	pages, err := confluence_api.GetAllPagesInSpace(*api, space_to_export)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -186,33 +188,6 @@ ancestor_ids: %s
 		content:    body,
 		outputPath: relativeOutputPath,
 	}, nil
-}
-
-// XXX Hmm this is a deprecated API?
-func GetAllPagesInSpace(api conf.API, space string) ([]conf.Content, error) {
-	//get content by space name
-	there_is_more := true
-	results := []conf.Content{}
-	var position int
-
-	position = 0
-	for there_is_more {
-		res, err := api.GetContent(conf.ContentQuery{
-			SpaceKey: space,
-			Start:    position,
-		})
-		if err != nil {
-			return []conf.Content{}, err
-		}
-		position += res.Size
-		there_is_more = res.Size > 0
-		if there_is_more {
-			results = append(results, res.Results...)
-			fmt.Printf("Found %d items in %s\n", position, space)
-		}
-	}
-
-	return results, nil
 }
 
 func canonicalise(title string) (string, error) {
