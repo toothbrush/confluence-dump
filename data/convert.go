@@ -1,21 +1,13 @@
 package data
 
 import (
-	"bytes"
 	"fmt"
-	"os"
-	"path"
-	"strconv"
 	"strings"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	md_plugin "github.com/JohannesKaufmann/html-to-markdown/plugin"
-	"github.com/mitchellh/go-homedir"
 	conf "github.com/virtomize/confluence-go-api"
-	"github.com/yuin/goldmark"
-	meta "github.com/yuin/goldmark-meta"
-	"github.com/yuin/goldmark/extension"
-	"github.com/yuin/goldmark/parser"
+	"gopkg.in/yaml.v3"
 )
 
 func ConvertToMarkdown(content *conf.Content, metadata_cache MetadataCache) (LocalMarkdown, error) {
@@ -49,30 +41,29 @@ func ConvertToMarkdown(content *conf.Content, metadata_cache MetadataCache) (Loc
 		}
 	}
 
-	ancestor_ids_str := fmt.Sprintf("[%s]", strings.Join(ancestor_ids, ", "))
+	header := MarkdownHeader{
+		Title:         content.Title,
+		Date:          content.Version.When,
+		Version:       content.Version.Number,
+		ObjectId:      content.ID,
+		Uri:           item_web_uri,
+		Status:        content.Status,
+		ObjectType:    content.Type,
+		AncestorNames: ancestor_names,
+		AncestorIds:   ancestor_ids,
+	}
+
+	yaml_header, err := yaml.Marshal(header)
+	if err != nil {
+		return LocalMarkdown{}, fmt.Errorf("data: Couldn't marshal header YAML: %w", err)
+	}
 
 	body := fmt.Sprintf(`---
-title: %s
-date: %s
-version: %d
-object_id: %s
-uri: %s
-status: %s
-type: %s
-ancestor_names: %s
-ancestor_ids: %s
+%s
 ---
 %s
 `,
-		content.Title,
-		content.Version.When,
-		content.Version.Number,
-		content.ID,
-		item_web_uri,
-		content.Status,
-		content.Type,
-		strings.Join(ancestor_names, " > "),
-		ancestor_ids_str,
+		strings.TrimSpace(string(yaml_header)),
 		markdown)
 
 	relativeOutputPath, err := pagePath(*content, metadata_cache)
@@ -155,13 +146,13 @@ func safeParseFieldToString(fieldname string, metadata map[string]interface{}) (
 }
 
 type MarkdownHeader struct {
-	title string
-	// date           time.Time
-	version   int
-	object_id string
-	// uri            string
-	// status         string
-	// obj_type       string
-	// ancestor_names []string
-	// ancestor_ids   []string
+	Title         string
+	Date          string // eventually: time.Time
+	Version       int
+	ObjectId      string // eventually: int
+	Uri           string
+	Status        string
+	ObjectType    string
+	AncestorNames []string
+	AncestorIds   []string // eventually: []int
 }
