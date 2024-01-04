@@ -10,6 +10,7 @@ import (
 	"gopkg.in/dnaeon/go-vcr.v3/cassette"
 	"gopkg.in/dnaeon/go-vcr.v3/recorder"
 
+	"github.com/mitchellh/go-homedir"
 	"github.com/toothbrush/confluence-dump/confluence_api"
 	"github.com/toothbrush/confluence-dump/data"
 	"github.com/toothbrush/confluence-dump/local_dump"
@@ -18,6 +19,11 @@ import (
 const REPO_BASE = "~/confluence"
 
 func main() {
+	storePath, err := homedir.Expand(REPO_BASE)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	token_cmd_output, err := exec.Command("pass", "confluence-api-token/paul.david@redbubble.com").Output()
 	if err != nil {
 		log.Fatal(err)
@@ -25,12 +31,7 @@ func main() {
 
 	token := strings.Split(string(token_cmd_output), "\n")[0]
 
-	// read markdown hjere asdf
-	result, err := data.ParseExistingMarkdown(REPO_BASE, "CORE/core-home.md")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%+v\n", result)
+	local_dump.LoadLocalMarkdown(storePath)
 	return
 
 	api, err := confluence_api.GetConfluenceAPI(
@@ -108,7 +109,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		if err = local_dump.WriteMarkdownIntoLocal(markdown); err != nil {
+		if err = local_dump.WriteMarkdownIntoLocal(storePath, markdown); err != nil {
 			log.Fatal(err)
 		}
 	}
