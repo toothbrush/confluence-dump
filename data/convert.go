@@ -1,13 +1,17 @@
 package data
 
 import (
+	"bytes"
 	"fmt"
+	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	md_plugin "github.com/JohannesKaufmann/html-to-markdown/plugin"
+	"github.com/mitchellh/go-homedir"
 	conf "github.com/virtomize/confluence-go-api"
 	"gopkg.in/yaml.v3"
 )
@@ -91,13 +95,6 @@ func ConvertToMarkdown(content *conf.Content, metadata_cache MetadataCache) (Loc
 }
 
 func ParseExistingMarkdown(storePath string, relativePath string) (LocalMarkdown, error) {
-	markdown := goldmark.New(
-		goldmark.WithExtensions(
-			extension.GFM,
-			meta.Meta,
-		),
-	)
-
 	fullPath, err := homedir.Expand(path.Join(storePath, relativePath))
 	if err != nil {
 		return LocalMarkdown{}, fmt.Errorf("data: Couldn't expand homedir: %w", err)
@@ -108,53 +105,24 @@ func ParseExistingMarkdown(storePath string, relativePath string) (LocalMarkdown
 		return LocalMarkdown{}, fmt.Errorf("data: Couldn't read file %s: %w", fullPath, err)
 	}
 
-	context := parser.NewContext()
-	var buf bytes.Buffer
-	if err := markdown.Convert(source, &buf, parser.WithContext(context)); err != nil {
-		return LocalMarkdown{}, fmt.Errorf("data: Couldn't parse Markdown from %s: %w", relativePath, err)
-	}
-	header := MarkdownHeader{}
-	metaData := meta.Get(context)
+	d := yaml.NewDecoder(bytes.NewReader(source))
+	header := new(MarkdownHeader)
 
-	id, err := safeParseFieldToString("object_id", metaData)
-	if err != nil {
-		return LocalMarkdown{}, fmt.Errorf("data: Invalid 'object_id' field: %w", err)
+	// we expect the first "document" to be our header YAML.
+	if err := d.Decode(&header); err != nil {
+		return LocalMarkdown{}, fmt.Errorf("data: Couldn't parse header of file %s: %w", fullPath, err)
 	}
-	header.object_id = id
-
-	title, err := safeParseFieldToString("title", metaData)
-	if err != nil {
-		return LocalMarkdown{}, fmt.Errorf("data: Invalid 'title' field: %w", err)
+	// check it was parsed
+	if header == nil {
+		return LocalMarkdown{}, fmt.Errorf("data: Header seems empty in %s: %w", fullPath, err)
 	}
-	header.title = title
-
-	version, err := safeParseFieldToString("version", metaData)
-	if err != nil {
-		return LocalMarkdown{}, fmt.Errorf("data: Invalid 'version' field: %w", err)
-	}
-	v, err := strconv.Atoi(version)
-	if err != nil {
-		return LocalMarkdown{}, fmt.Errorf("data: Invalid 'version' field: %w", err)
-	}
-	header.version = v
 
 	return LocalMarkdown{
 		Content:      string(source),
-		ID:           header.object_id,
+		ID:           fmt.Sprintf("%d", header.ObjectId),
 		RelativePath: relativePath,
+		Version:      header.Version,
 	}, nil
-}
-
-func safeParseFieldToString(fieldname string, metadata map[string]interface{}) (string, error) {
-	if raw, ok := metadata[fieldname]; ok {
-		if val, ok := raw.(string); ok {
-			return val, nil
-		} else {
-			return "", fmt.Errorf("data: Field '%s' is not 'string'", fieldname)
-		}
-	} else {
-		return "", fmt.Errorf("data: Field '%s' not found in Markdown metadata", fieldname)
-	}
 }
 
 type MarkdownHeader struct {

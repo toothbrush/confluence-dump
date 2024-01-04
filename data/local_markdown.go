@@ -7,6 +7,8 @@ type LocalMarkdown struct {
 	// original Confluence ID of the item
 	ID string
 
+	Version int
+
 	// path relative to DUMP location (e.g., ~/confluence)
 	RelativePath string
 }
