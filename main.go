@@ -92,29 +92,20 @@ func main() {
 	}
 
 	for _, page := range pages {
-		err = GetPageByIDThenStore(*api, page.ID, id_title_mapping)
+		c, err := confluence_api.RetrieveContentByID(*api, page.ID)
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
-}
 
-func GetPageByIDThenStore(api conf.API, id string, id_title_mapping data.MetadataCache) error {
-	c, err := confluence_api.RetrieveContentByID(api, id)
-	if err != nil {
-		return err
-	}
+		markdown, err := data.ConvertToMarkdown(c, id_title_mapping)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	markdown, err := data.ConvertToMarkdown(c, id_title_mapping)
-	if err != nil {
-		return err
+		if err = local_dump.WriteMarkdownIntoLocal(markdown); err != nil {
+			log.Fatal(err)
+		}
 	}
-
-	if err = local_dump.WriteMarkdownIntoLocal(markdown); err != nil {
-		return fmt.Errorf("could not write to repo file: %w", err)
-	}
-
-	return nil
 }
 
 func canonicalise(title string) (string, error) {
