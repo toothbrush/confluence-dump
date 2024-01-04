@@ -231,26 +231,3 @@ func BuildIDTitleMapping(pages []conf.Content, space_key string) (map[string]IdT
 
 	return id_title_mapping, nil
 }
-
-func PagePath(page conf.Content, id_to_slug *map[string]IdTitleSlug) (string, error) {
-	path_parts := []string{}
-
-	for _, ancestor := range page.Ancestors {
-		if ancestor_name, ok := (*id_to_slug)[ancestor.ID]; ok {
-			path_parts = append(path_parts, ancestor_name.slug)
-		} else {
-			// oh no, found an ID with no title mapped!!
-			return "", fmt.Errorf("oh no, found an ID we haven't seen before! %s", ancestor.ID)
-		}
-	}
-
-	if my_details, ok := (*id_to_slug)[page.ID]; ok {
-		path_parts = append([]string{my_details.space_key}, path_parts...)
-		path_parts = append(path_parts, fmt.Sprintf("%s.md", my_details.slug))
-	} else {
-		// oh no, our own ID isn't in the mapping?
-		return "", fmt.Errorf("oh no, couldn't retrieve page ID %s from mapping!", page.ID)
-	}
-
-	return path.Join(path_parts...), nil
-}
