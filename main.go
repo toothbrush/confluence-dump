@@ -71,6 +71,15 @@ func main() {
 
 	fmt.Printf("Logged in to id.atlassian.com as '%s (%s)'...\n", currentUser.DisplayName, currentUser.AccountID)
 
+	spaces, err := confluence_api.ListAllSpaces(*api)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, space := range spaces {
+		fmt.Printf("  - %s: %s\n", space.Key, space.Name)
+	}
+
 	space_to_export := "CORE"
 	pages, err := GetAllPagesInSpace(*api, space_to_export)
 	if err != nil {
@@ -177,24 +186,6 @@ ancestor_ids: %s
 		content:    body,
 		outputPath: relativeOutputPath,
 	}, nil
-}
-
-func PrintAllSpaces(api conf.API) error {
-	fmt.Printf("Listing Confluence spaces:\n\n")
-	spaces, err := api.GetAllSpaces(conf.AllSpacesQuery{
-		Type:  "global",
-		Start: 0,
-		Limit: 1000,
-	})
-	if err != nil {
-		return err
-	}
-
-	for _, space := range spaces.Results {
-		fmt.Printf("  - %s: %s\n", space.Key, space.Name)
-	}
-
-	return nil
 }
 
 // XXX Hmm this is a deprecated API?
