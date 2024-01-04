@@ -42,7 +42,8 @@ func ConvertToMarkdown(content *conf.Content, metadata_cache MetadataCache) (Loc
 
 	ancestor_ids_str := fmt.Sprintf("[%s]", strings.Join(ancestor_ids, ", "))
 
-	body := fmt.Sprintf(`title: %s
+	body := fmt.Sprintf(`---
+title: %s
 date: %s
 version: %d
 object_id: %s
