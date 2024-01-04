@@ -25,6 +25,14 @@ func main() {
 
 	token := strings.Split(string(token_cmd_output), "\n")[0]
 
+	// read markdown hjere asdf
+	result, err := data.ParseExistingMarkdown(REPO_BASE, "CORE/core-home.md")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", result)
+	return
+
 	api, err := confluence_api.GetConfluenceAPI(
 		"redbubble",
 		"paul.david@redbubble.com",
