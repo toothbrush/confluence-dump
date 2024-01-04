@@ -1,17 +1,13 @@
 package data
 
 import (
-	"bytes"
 	"fmt"
-	"os"
-	"path"
 	"strconv"
 	"strings"
 	"time"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	md_plugin "github.com/JohannesKaufmann/html-to-markdown/plugin"
-	"github.com/mitchellh/go-homedir"
 	conf "github.com/virtomize/confluence-go-api"
 	"gopkg.in/yaml.v3"
 )
@@ -74,6 +70,8 @@ func ConvertToMarkdown(content *conf.Content, metadata_cache MetadataCache) (Loc
 		return LocalMarkdown{}, fmt.Errorf("data: Couldn't marshal header YAML: %w", err)
 	}
 
+	// maybe one day consider storing entire header in LocalMarkdown object, and putting the "write
+	// to file" logic elsewhere.
 	body := fmt.Sprintf(`---
 %s
 ---
@@ -91,37 +89,6 @@ func ConvertToMarkdown(content *conf.Content, metadata_cache MetadataCache) (Loc
 		ID:           content.ID,
 		Content:      body,
 		RelativePath: relativeOutputPath,
-	}, nil
-}
-
-func ParseExistingMarkdown(storePath string, relativePath string) (LocalMarkdown, error) {
-	fullPath, err := homedir.Expand(path.Join(storePath, relativePath))
-	if err != nil {
-		return LocalMarkdown{}, fmt.Errorf("data: Couldn't expand homedir: %w", err)
-	}
-
-	source, err := os.ReadFile(fullPath)
-	if err != nil {
-		return LocalMarkdown{}, fmt.Errorf("data: Couldn't read file %s: %w", fullPath, err)
-	}
-
-	d := yaml.NewDecoder(bytes.NewReader(source))
-	header := new(MarkdownHeader)
-
-	// we expect the first "document" to be our header YAML.
-	if err := d.Decode(&header); err != nil {
-		return LocalMarkdown{}, fmt.Errorf("data: Couldn't parse header of file %s: %w", fullPath, err)
-	}
-	// check it was parsed
-	if header == nil {
-		return LocalMarkdown{}, fmt.Errorf("data: Header seems empty in %s: %w", fullPath, err)
-	}
-
-	return LocalMarkdown{
-		Content:      string(source),
-		ID:           fmt.Sprintf("%d", header.ObjectId),
-		RelativePath: relativePath,
-		Version:      header.Version,
 	}, nil
 }
 
