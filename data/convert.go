@@ -2,6 +2,7 @@ package data
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
@@ -25,27 +26,32 @@ func ConvertToMarkdown(content *conf.Content, metadata_cache MetadataCache) (Loc
 	// we could (fancy mode) resolve to a link in the local dump or (grug mode) just add the
 	// https://redbubble.atlassian.net base URL.
 	ancestor_names := []string{}
-	ancestor_ids := []string{}
+	ancestor_ids := []int{}
 	for _, ancestor := range content.Ancestors {
 		ancestor_metadata, ok := metadata_cache[ancestor.ID]
 		if ok {
-			ancestor_names = append(
-				ancestor_names,
-				// might decide to ditch the quotes
-				fmt.Sprintf("\"%s\"", ancestor_metadata.Title),
-			)
-			ancestor_ids = append(ancestor_ids, ancestor.ID)
+			ancestor_names = append(ancestor_names, ancestor_metadata.Title)
+
+			ancestor_id, err := strconv.Atoi(ancestor.ID)
+			if err != nil {
+				return LocalMarkdown{}, fmt.Errorf("data: Object ID %s not an int: %w", ancestor.ID, err)
+			}
+			ancestor_ids = append(ancestor_ids, ancestor_id)
 		} else {
 			// oh no, found an ID with no title mapped!!
 			return LocalMarkdown{}, fmt.Errorf("data: Found an ID reference we haven't seen before! %s", ancestor.ID)
 		}
+	}
+	id, err := strconv.Atoi(content.ID)
+	if err != nil {
+		return LocalMarkdown{}, fmt.Errorf("data: Object ID %s not an int: %w", content.ID, err)
 	}
 
 	header := MarkdownHeader{
 		Title:         content.Title,
 		Date:          content.Version.When,
 		Version:       content.Version.Number,
-		ObjectId:      content.ID,
+		ObjectId:      id,
 		Uri:           item_web_uri,
 		Status:        content.Status,
 		ObjectType:    content.Type,
@@ -149,10 +155,10 @@ type MarkdownHeader struct {
 	Title         string
 	Date          string // eventually: time.Time
 	Version       int
-	ObjectId      string // eventually: int
+	ObjectId      int `yaml:"object_id"`
 	Uri           string
 	Status        string
-	ObjectType    string
-	AncestorNames []string
-	AncestorIds   []string // eventually: []int
+	ObjectType    string   `yaml:"object_type"`
+	AncestorNames []string `yaml:"ancestor_names,flow"`
+	AncestorIds   []int    `yaml:"ancestor_ids,flow"`
 }
