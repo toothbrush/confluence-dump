@@ -24,7 +24,6 @@ Is something not working for you?  Have a look whether your config is as you exp
 		for key, value := range viper.GetViper().AllSettings() {
 			fmt.Printf("  %s: %s\n", key, value)
 		}
-		fmt.Printf(" %s: %s\n", "config", viper.GetString("config"))
 	},
 }
 
