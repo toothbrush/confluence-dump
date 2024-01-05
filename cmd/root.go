@@ -56,7 +56,7 @@ func init() {
 	// Define cobra flags, the default value has the lowest (least significant) precedence
 	rootCmd.PersistentFlags().StringVar(&Config, "config", "", "config file location (default: ~/.config/confluence-dump.yaml)")
 	rootCmd.PersistentFlags().BoolVar(&Debug, "debug", false, "display debug output")
-	rootCmd.PersistentFlags().StringArrayVar(&AuthTokenCmd, "auth-token-cmd", []string{}, "shell command to retrieve Atlassian auth token")
+	rootCmd.PersistentFlags().StringSliceVar(&AuthTokenCmd, "auth-token-cmd", []string{}, "shell command to retrieve Atlassian auth token")
 	rootCmd.PersistentFlags().StringVar(&LocalStore, "store", "", "location to save Confluence pages")
 }
 
@@ -133,6 +133,7 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) error {
 				// cobra expects a slice to be provided with commas, i believe.
 				if valslice, ok := val.([]interface{}); ok {
 					for _, vs := range valslice {
+						// yes, repeatedly calling Set() appends to the slice...
 						err := cmd.Flags().Set(f.Name, fmt.Sprintf("%v", vs))
 						if err != nil {
 							// hmm
