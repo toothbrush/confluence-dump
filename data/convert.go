@@ -12,7 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ConvertToMarkdown(content *conf.Content, metadata_cache MetadataCache) (LocalMarkdown, error) {
+func ConvertToMarkdown(content *conf.Content, metadata_cache RemoteContentCache) (LocalMarkdown, error) {
 	converter := md.NewConverter("", true, nil)
 	// Github flavoured Markdown knows about tables 👍
 	converter.Use(md_plugin.GitHubFlavored())

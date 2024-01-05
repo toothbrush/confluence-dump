@@ -138,21 +138,8 @@ func runDownload() error {
 	}
 	d_log("Found %d pages on remote...\n", len(remote_title_cache))
 
-	pages_to_download := local_dump.ChangedPages(remote_title_cache, local_markdown)
-	fmt.Printf("Found %d updated pages to download...\n", len(pages_to_download))
-
-	for _, page := range pages_to_download {
-		c, err := confluence_api.RetrieveContentByID(*api, page)
-		if err != nil {
-			return fmt.Errorf("cmd: Confluence download failed: %w", err)
-		}
-
-		markdown, err := data.ConvertToMarkdown(c, remote_title_cache)
-		if err != nil {
-			return fmt.Errorf("cmd: Confluence download failed: %w", err)
-		}
-
-		if err = local_dump.WriteMarkdownIntoLocal(storePath, markdown); err != nil {
+	for _, page := range pages {
+		if err := confluence_api.DownloadIfChanged(AlwaysDownload, *api, page.ID, remote_title_cache, local_markdown, storePath); err != nil {
 			return fmt.Errorf("cmd: Confluence download failed: %w", err)
 		}
 	}

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/toothbrush/confluence-dump/data"
+	"github.com/toothbrush/confluence-dump/local_dump"
 	conf "github.com/virtomize/confluence-go-api"
 )
 
@@ -34,6 +36,40 @@ func GetAllPagesInSpace(api conf.API, space string) ([]conf.Content, error) {
 	}
 
 	return contents, nil
+}
+
+func DownloadIfChanged(always_download bool, api conf.API, id string, remote_title_cache data.RemoteContentCache, local_cache data.LocalMarkdownCache, storePath string) error {
+	stale, err := local_dump.LocalPageIsStale(id, remote_title_cache, local_cache)
+	if err != nil {
+		return fmt.Errorf("confluence_api: Staleness check failed: %w", err)
+	}
+
+	if !stale {
+		if always_download {
+			fmt.Fprintf(os.Stderr, "Page %s is up-to-date, redownloading anyway because always-download=true...\n", id)
+		} else {
+			if our_item, ok := local_cache[id]; ok {
+				fmt.Fprintf(os.Stderr, "Page %s is up-to-date in '%s', skipping...\n", id, our_item.RelativePath)
+				return nil
+			}
+		}
+	}
+
+	c, err := RetrieveContentByID(api, id)
+	if err != nil {
+		return fmt.Errorf("confluence_api: Confluence download failed: %w", err)
+	}
+
+	markdown, err := data.ConvertToMarkdown(c, remote_title_cache)
+	if err != nil {
+		return fmt.Errorf("confluence_api: Convert to Markdown failed: %w", err)
+	}
+
+	if err = local_dump.WriteMarkdownIntoLocal(storePath, markdown); err != nil {
+		return fmt.Errorf("confluence_api: Write to file failed: %w", err)
+	}
+
+	return nil
 }
 
 func RetrieveContentByID(api conf.API, id string) (*conf.Content, error) {

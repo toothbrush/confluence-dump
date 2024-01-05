@@ -26,8 +26,8 @@ func canonicalise(title string) (string, error) {
 	return str, nil
 }
 
-func BuildCacheFromPagelist(pages []conf.Content, space_key string) (MetadataCache, error) {
-	id_title_mapping := make(MetadataCache)
+func BuildCacheFromPagelist(pages []conf.Content, space_key string) (RemoteContentCache, error) {
+	id_title_mapping := make(RemoteContentCache)
 
 	for _, page := range pages {
 		slug, err := canonicalise(page.Title)

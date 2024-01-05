@@ -7,7 +7,7 @@ import (
 	conf "github.com/virtomize/confluence-go-api"
 )
 
-func pagePath(page conf.Content, id_to_slug MetadataCache) (string, error) {
+func pagePath(page conf.Content, id_to_slug RemoteContentCache) (string, error) {
 	path_parts := []string{}
 
 	for _, ancestor := range page.Ancestors {
