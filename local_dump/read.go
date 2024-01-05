@@ -27,8 +27,8 @@ func ParseExistingMarkdown(storePath string, relativePath string) (data.LocalMar
 		return data.LocalMarkdown{}, fmt.Errorf("local_dump: Couldn't parse header of file %s: %w", fullPath, err)
 	}
 	// check it was parsed
-	if header == nil {
-		return data.LocalMarkdown{}, fmt.Errorf("local_dump: Header seems empty in %s: %w", fullPath, err)
+	if header == nil && header.ObjectId > 0 && header.Version > 0 {
+		return data.LocalMarkdown{}, fmt.Errorf("local_dump: Header seems broken in %s", fullPath)
 	}
 
 	return data.LocalMarkdown{

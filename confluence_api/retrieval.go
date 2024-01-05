@@ -86,7 +86,7 @@ func GetAllBlogPosts(api conf.API) ([]data.ConfluenceContent, error) {
 }
 
 func DownloadIfChanged(always_download bool, api conf.API, content data.ConfluenceContent, remote_title_cache data.RemoteContentCache, local_cache data.LocalMarkdownCache, storePath string) error {
-	stale, err := local_dump.LocalPageIsStale(content.Content.ID, remote_title_cache, local_cache)
+	stale, err := local_dump.LocalPageIsStale(content, remote_title_cache, local_cache)
 	if err != nil {
 		return fmt.Errorf("confluence_api: Staleness check failed: %w", err)
 	}
