@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -28,6 +29,10 @@ var (
 	Config       string // this is what the user provides
 	ConfigActual string // this is what Viper ended up loading
 	Debug        bool
+
+	// Command to run to retrieve API Personal Access Token
+	AuthTokenCmd []string
+	LocalStore   string
 )
 
 // Build the cobra command that handles our command line tool.
@@ -51,6 +56,8 @@ func init() {
 	// Define cobra flags, the default value has the lowest (least significant) precedence
 	rootCmd.PersistentFlags().StringVar(&Config, "config", "", "config file location (default: ~/.config/confluence-dump.yaml)")
 	rootCmd.PersistentFlags().BoolVar(&Debug, "debug", false, "display debug output")
+	rootCmd.PersistentFlags().StringArrayVar(&AuthTokenCmd, "auth-token-cmd", []string{}, "shell command to retrieve Atlassian auth token")
+	rootCmd.PersistentFlags().StringVar(&LocalStore, "store", "", "location to save Confluence pages")
 }
 
 func initializeConfig(cmd *cobra.Command) error {
@@ -118,10 +125,27 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) error {
 		// Apply the viper config value to the flag when the flag is not set and viper has a value
 		if !f.Changed && v.IsSet(configName) {
 			val := v.Get(configName)
-			err := cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
-			if err != nil {
-				// hmm
-				panic(err)
+			rt := reflect.TypeOf(val)
+
+			if rt.Kind() == reflect.Slice {
+				// let's handle slices specially, because i don't want nested stuff...
+				//
+				// cobra expects a slice to be provided with commas, i believe.
+				if valslice, ok := val.([]interface{}); ok {
+					for _, vs := range valslice {
+						err := cmd.Flags().Set(f.Name, fmt.Sprintf("%v", vs))
+						if err != nil {
+							// hmm
+							panic(err)
+						}
+					}
+				}
+			} else {
+				err := cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+				if err != nil {
+					// hmm
+					panic(err)
+				}
 			}
 		}
 	})
