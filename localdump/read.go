@@ -79,7 +79,7 @@ func ListAllMarkdownFiles(inFolder string) ([]string, error) {
 		// path/to/whatever exists
 	} else if errors.Is(err, os.ErrNotExist) {
 		// path/to/whatever does *not* exist; this might mean this is the first time running.
-		return []string{}, nil
+		return nil, nil
 	} else {
 		// some other error
 		return nil, fmt.Errorf("localdump: Error opening %s for file tree walk: %w", inFolder, err)
