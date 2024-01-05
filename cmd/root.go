@@ -32,7 +32,10 @@ var (
 
 	// Command to run to retrieve API Personal Access Token
 	AuthTokenCmd []string
-	LocalStore   string
+
+	AuthUsername       string
+	LocalStore         string
+	ConfluenceInstance string
 )
 
 // Build the cobra command that handles our command line tool.
@@ -58,6 +61,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&Debug, "debug", false, "display debug output")
 	rootCmd.PersistentFlags().StringSliceVar(&AuthTokenCmd, "auth-token-cmd", []string{}, "shell command to retrieve Atlassian auth token")
 	rootCmd.PersistentFlags().StringVar(&LocalStore, "store", "", "location to save Confluence pages")
+	rootCmd.PersistentFlags().StringVar(&AuthUsername, "auth-username", "", "your Atlassian username")
+	rootCmd.PersistentFlags().StringVar(&ConfluenceInstance, "confluence-instance", "", "your Atlassian ORG name, e.g. ORG in ORG.atlassian.net")
 }
 
 func initializeConfig(cmd *cobra.Command) error {
