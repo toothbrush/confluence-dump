@@ -7,7 +7,7 @@ import (
 	conf "github.com/virtomize/confluence-go-api"
 )
 
-func pagePath(page conf.Content, id_to_slug RemoteContentCache) (string, error) {
+func PagePath(page conf.Content, id_to_slug RemoteContentCache) (string, error) {
 	path_parts := []string{}
 
 	for _, ancestor := range page.Ancestors {
@@ -21,14 +21,51 @@ func pagePath(page conf.Content, id_to_slug RemoteContentCache) (string, error) 
 	}
 
 	if page_metadata, ok := id_to_slug[page.ID]; ok {
+		// if this is a blog post, let's also prepend the author's .. identifier.
+		if page.Type == "blogpost" {
+			userId, err := userId(page)
+			if err != nil {
+				return "", fmt.Errorf("data: failed to determine user's identity: %w", err)
+			}
+
+			path_parts = append([]string{userId}, path_parts...)
+		}
+
 		// prepend space code, e.g. CORE,
 		path_parts = append([]string{page_metadata.SpaceKey}, path_parts...)
-		// append my filename, which is <slug>.md
-		path_parts = append(path_parts, fmt.Sprintf("%s.md", page_metadata.Slug))
+
+		// append my filename, which is <id>-<slug>.md
+		path_parts = append(path_parts, fmt.Sprintf("%s-%s.md", page_metadata.ID, page_metadata.Slug))
 	} else {
 		// oh no, our own ID isn't in the mapping?
 		return "", fmt.Errorf("data: Couldn't retrieve page ID %s from cache", page.ID)
 	}
 
 	return path.Join(path_parts...), nil
+}
+
+func userId(page conf.Content) (string, error) {
+	version := page.Version
+	if version == nil {
+		return "", fmt.Errorf("data: Page .Version nil for item %s", page.ID)
+	}
+	user := version.By
+	if user == nil {
+		return "", fmt.Errorf("data: Page .Version.By nil for item %s", page.ID)
+	}
+	if user.DisplayName != "" {
+		slug, err := canonicalise(user.DisplayName)
+		if err != nil {
+			return "", fmt.Errorf("data: Failed to canonicalise username '%s': %w", user.DisplayName, err)
+		}
+		return slug, nil
+	}
+	if user.Username != "" {
+		return user.Username, nil
+	}
+	if user.AccountID != "" {
+		return user.AccountID, nil
+	}
+
+	return "", fmt.Errorf("data: User has no name or id for item %s", page.ID)
 }

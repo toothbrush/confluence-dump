@@ -86,7 +86,7 @@ func ConvertToMarkdown(content *conf.Content, metadata_cache RemoteContentCache)
 		strings.TrimSpace(string(yaml_header)),
 		markdown)
 
-	relativeOutputPath, err := pagePath(*content, metadata_cache)
+	relativeOutputPath, err := PagePath(*content, metadata_cache)
 	if err != nil {
 		return LocalMarkdown{}, fmt.Errorf("data: Couldn't determine page path: %w", err)
 	}

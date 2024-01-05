@@ -6,37 +6,24 @@ import (
 	"github.com/toothbrush/confluence-dump/data"
 )
 
-func ChangedPages(remote_cache data.RemoteContentCache, local_files data.LocalMarkdownCache) []string {
-	changed_pages := []string{}
+func LocalPageIsStale(content data.ConfluenceContent, remote_cache data.RemoteContentCache, local_files data.LocalMarkdownCache) (bool, error) {
+	id := content.Content.ID
 
-	for _, remote := range remote_cache {
-		if our_item, ok := local_files[remote.ID]; ok {
-			// ok, we _are_ aware of it.  how about the version?
-			our_version := our_item.Version
-			if our_version != remote.Version {
-				// it's a different version though.  redownload.
-				changed_pages = append(changed_pages, remote.ID)
-			}
-		} else {
-			// we don't have the remote item at all -- add it to the download list
-			changed_pages = append(changed_pages, remote.ID)
-		}
-	}
-
-	return changed_pages
-}
-
-func LocalPageIsStale(id string, remote_cache data.RemoteContentCache, local_files data.LocalMarkdownCache) (bool, error) {
 	if remote, ok := remote_cache[id]; ok {
 		if our_item, ok := local_files[id]; ok {
+
+			remote_item_target_path, err := data.PagePath(content.Content, remote_cache)
+			if err != nil {
+				return false, fmt.Errorf("local_dump: Couldn't determine target path for object ID %s: %w", id, err)
+			}
+
 			// ok, we _are_ aware of it.  how about the version?
-			our_version := our_item.Version
-			if our_version != remote.Version {
-				// it's a different version though.  redownload.
-				return true, nil
-			} else {
+			if (our_item.Version == remote.Version) && (our_item.RelativePath == remote_item_target_path) {
 				// oh, we know about it, and it's the same version! nothing to do here.
 				return false, nil
+			} else {
+				// it's a different version or wrong file path.  redownload.
+				return true, nil
 			}
 		} else {
 			// we don't have the remote item at all -- add it to the download list
