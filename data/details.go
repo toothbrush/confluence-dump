@@ -23,12 +23,12 @@ func PagePath(page conf.Content, remote_content_cache RemoteContentCache) (Relat
 	if page_metadata, ok := remote_content_cache[ContentID(page.ID)]; ok {
 		// if this is a blog post, let's also prepend the author's .. identifier.
 		if page.Type == "blogpost" {
-			userId, err := userId(page)
+			userID, err := userID(page)
 			if err != nil {
 				return "", fmt.Errorf("data: failed to determine user's identity: %w", err)
 			}
 
-			path_parts = append([]string{userId}, path_parts...)
+			path_parts = append([]string{userID}, path_parts...)
 		}
 
 		// prepend space code, e.g. CORE,
@@ -47,7 +47,7 @@ func PagePath(page conf.Content, remote_content_cache RemoteContentCache) (Relat
 	return RelativePath(path.Join(path_parts...)), nil
 }
 
-func userId(page conf.Content) (string, error) {
+func userID(page conf.Content) (string, error) {
 	version := page.Version
 	if version == nil {
 		return "", fmt.Errorf("data: Page .Version nil for item %s", page.ID)

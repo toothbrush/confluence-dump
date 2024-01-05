@@ -28,13 +28,13 @@ func ParseExistingMarkdown(storePath string, relativePath string) (data.LocalMar
 		return data.LocalMarkdown{}, fmt.Errorf("localdump: Couldn't parse header of file %s: %w", fullPath, err)
 	}
 	// check it was parsed
-	if !(header.ObjectId > 0 && header.Version > 0) {
+	if !(header.ObjectID > 0 && header.Version > 0) {
 		return data.LocalMarkdown{}, fmt.Errorf("localdump: Header seems broken in %s", fullPath)
 	}
 
 	return data.LocalMarkdown{
 		Content:      string(source),
-		ID:           data.ContentID(fmt.Sprintf("%d", header.ObjectId)),
+		ID:           data.ContentID(fmt.Sprintf("%d", header.ObjectID)),
 		RelativePath: data.RelativePath(relativePath),
 		Version:      header.Version,
 	}, nil

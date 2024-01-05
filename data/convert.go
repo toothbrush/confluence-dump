@@ -63,12 +63,12 @@ func ConvertToMarkdown(content *conf.Content, metadata_cache RemoteContentCache)
 		Title:         content.Title,
 		Timestamp:     timestamp,
 		Version:       content.Version.Number,
-		ObjectId:      id,
-		Uri:           item_web_uri,
+		ObjectID:      id,
+		URI:           item_web_uri,
 		Status:        content.Status,
 		ObjectType:    content.Type,
 		AncestorNames: ancestor_names,
-		AncestorIds:   ancestor_ids,
+		AncestorIDs:   ancestor_ids,
 	}
 
 	yaml_header, err := yaml.Marshal(header)
@@ -102,10 +102,10 @@ type MarkdownHeader struct {
 	Title         string
 	Timestamp     time.Time
 	Version       int
-	ObjectId      int `yaml:"object_id"`
-	Uri           string
+	ObjectID      int `yaml:"object_id"`
+	URI           string
 	Status        string
 	ObjectType    string   `yaml:"object_type"`
 	AncestorNames []string `yaml:"ancestor_names,flow"`
-	AncestorIds   []int    `yaml:"ancestor_ids,flow"`
+	AncestorIDs   []int    `yaml:"ancestor_ids,flow"`
 }
