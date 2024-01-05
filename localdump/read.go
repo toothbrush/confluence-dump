@@ -21,14 +21,14 @@ func ParseExistingMarkdown(storePath string, relativePath string) (data.LocalMar
 	}
 
 	d := yaml.NewDecoder(bytes.NewReader(source))
-	header := new(data.MarkdownHeader)
+	var header data.MarkdownHeader
 
 	// we expect the first "document" to be our header YAML.
 	if err := d.Decode(&header); err != nil {
 		return data.LocalMarkdown{}, fmt.Errorf("localdump: Couldn't parse header of file %s: %w", fullPath, err)
 	}
 	// check it was parsed
-	if header == nil && header.ObjectId > 0 && header.Version > 0 {
+	if !(header.ObjectId > 0 && header.Version > 0) {
 		return data.LocalMarkdown{}, fmt.Errorf("localdump: Header seems broken in %s", fullPath)
 	}
 
