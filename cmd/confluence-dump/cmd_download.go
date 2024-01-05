@@ -1,7 +1,7 @@
 /*
 Copyright © 2024 paul <paul@denknerd.org>
 */
-package cmd
+package main
 
 import (
 	"fmt"
@@ -14,9 +14,9 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
-	"github.com/toothbrush/confluence-dump/confluence_api"
+	"github.com/toothbrush/confluence-dump/confluenceapi"
 	"github.com/toothbrush/confluence-dump/data"
-	"github.com/toothbrush/confluence-dump/local_dump"
+	"github.com/toothbrush/confluence-dump/localdump"
 	"gopkg.in/dnaeon/go-vcr.v3/cassette"
 	"gopkg.in/dnaeon/go-vcr.v3/recorder"
 
@@ -66,7 +66,7 @@ func runDownload() error {
 
 	storePathWithOrg := path.Join(storePath, ConfluenceInstance)
 	if err := os.MkdirAll(storePathWithOrg, 0755); err != nil {
-		return fmt.Errorf("local_dump: Couldn't create directory %s: %w", storePathWithOrg, err)
+		return fmt.Errorf("localdump: Couldn't create directory %s: %w", storePathWithOrg, err)
 	}
 
 	token_cmd_output, err := exec.Command(AuthTokenCmd[0], AuthTokenCmd[1:]...).Output()
@@ -76,7 +76,7 @@ func runDownload() error {
 
 	token := strings.Split(string(token_cmd_output), "\n")[0]
 
-	api, err := confluence_api.GetConfluenceAPI(
+	api, err := confluenceapi.GetConfluenceAPI(
 		ConfluenceInstance,
 		AuthUsername,
 		token)
@@ -120,7 +120,7 @@ func runDownload() error {
 	fmt.Printf("Logged in to id.atlassian.com as '%s (%s)'...\n", currentUser.DisplayName, currentUser.AccountID)
 
 	// list all spaces
-	spaces, err := confluence_api.ListAllSpaces(*api, ConfluenceInstance)
+	spaces, err := confluenceapi.ListAllSpaces(*api, ConfluenceInstance)
 	if err != nil {
 		return fmt.Errorf("cmd: Couldn't list Confluence spaces: %w", err)
 	}
@@ -159,12 +159,12 @@ func runDownload() error {
 }
 
 func GrabPostsInSpace(api conf.API, space_obj data.ConfluenceSpace, storePath string) error {
-	local_markdown, err := local_dump.LoadLocalMarkdown(storePath, space_obj)
+	local_markdown, err := localdump.LoadLocalMarkdown(storePath, space_obj)
 	if err != nil {
 		return fmt.Errorf("cmd: Couldn't load local Markdown database: %w", err)
 	}
 
-	pages, err := confluence_api.GetAllPagesInSpace(api, space_obj)
+	pages, err := confluenceapi.GetAllPagesInSpace(api, space_obj)
 	if err != nil {
 		return fmt.Errorf("cmd: Get all pages in '%s' failed: %w", space_obj.Space.Key, err)
 	}
@@ -177,7 +177,7 @@ func GrabPostsInSpace(api conf.API, space_obj data.ConfluenceSpace, storePath st
 	d_log("Found %d remote pages for '%s'...\n", len(remote_title_cache), space_obj.Space.Key)
 
 	for _, page := range pages {
-		if err := confluence_api.DownloadIfChanged(AlwaysDownload, api, page, remote_title_cache, local_markdown, storePath); err != nil {
+		if err := confluenceapi.DownloadIfChanged(AlwaysDownload, api, page, remote_title_cache, local_markdown, storePath); err != nil {
 			return fmt.Errorf("cmd: Confluence download failed: %w", err)
 		}
 	}

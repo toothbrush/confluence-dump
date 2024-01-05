@@ -1,4 +1,4 @@
-package local_dump
+package localdump
 
 import (
 	"fmt"
@@ -25,6 +25,6 @@ func LocalPageIsStale(content data.ConfluenceContent, remote_cache data.RemoteCo
 		}
 	} else {
 		// hmmm asking us about a thing we're not aware of!
-		return false, fmt.Errorf("local_dump: Queried LocalPageIsStale for invalid remote ID %s", id)
+		return false, fmt.Errorf("localdump: Queried LocalPageIsStale for invalid remote ID %s", id)
 	}
 }

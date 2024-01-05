@@ -1,11 +1,11 @@
-package confluence_api
+package confluenceapi
 
 import (
 	"fmt"
 	"os"
 
 	"github.com/toothbrush/confluence-dump/data"
-	"github.com/toothbrush/confluence-dump/local_dump"
+	"github.com/toothbrush/confluence-dump/localdump"
 	conf "github.com/virtomize/confluence-go-api"
 )
 
@@ -19,7 +19,7 @@ func GetAllPagesByQuery(api conf.API, query conf.ContentQuery) ([]conf.Content, 
 		query.Start = position
 		res, err := api.GetContent(query)
 		if err != nil {
-			return []conf.Content{}, fmt.Errorf("confluence_api: couldn't retrieve list of contents: %w", err)
+			return []conf.Content{}, fmt.Errorf("confluenceapi: couldn't retrieve list of contents: %w", err)
 		}
 
 		position += res.Size
@@ -51,7 +51,7 @@ func GetAllPagesInSpace(api conf.API, space data.ConfluenceSpace) ([]data.Conflu
 
 	results, err := GetAllPagesByQuery(api, query)
 	if err != nil {
-		return []data.ConfluenceContent{}, fmt.Errorf("confluence_api: Failed to retrieve space '%s' contents: %w", space.Space.Key, err)
+		return []data.ConfluenceContent{}, fmt.Errorf("confluenceapi: Failed to retrieve space '%s' contents: %w", space.Space.Key, err)
 	}
 
 	for _, res := range results {
@@ -65,9 +65,9 @@ func GetAllPagesInSpace(api conf.API, space data.ConfluenceSpace) ([]data.Conflu
 }
 
 func DownloadIfChanged(always_download bool, api conf.API, content data.ConfluenceContent, remote_title_cache data.RemoteContentCache, local_cache data.LocalMarkdownCache, storePath string) error {
-	stale, err := local_dump.LocalPageIsStale(content, remote_title_cache, local_cache)
+	stale, err := localdump.LocalPageIsStale(content, remote_title_cache, local_cache)
 	if err != nil {
-		return fmt.Errorf("confluence_api: Staleness check failed: %w", err)
+		return fmt.Errorf("confluenceapi: Staleness check failed: %w", err)
 	}
 
 	if !stale {
@@ -84,16 +84,16 @@ func DownloadIfChanged(always_download bool, api conf.API, content data.Confluen
 
 	c, err := RetrieveContentByID(api, content.Space, content.Content.ID)
 	if err != nil {
-		return fmt.Errorf("confluence_api: Confluence download failed: %w", err)
+		return fmt.Errorf("confluenceapi: Confluence download failed: %w", err)
 	}
 
 	markdown, err := data.ConvertToMarkdown(&c.Content, remote_title_cache)
 	if err != nil {
-		return fmt.Errorf("confluence_api: Convert to Markdown failed: %w", err)
+		return fmt.Errorf("confluenceapi: Convert to Markdown failed: %w", err)
 	}
 
-	if err = local_dump.WriteMarkdownIntoLocal(storePath, markdown); err != nil {
-		return fmt.Errorf("confluence_api: Write to file failed: %w", err)
+	if err = localdump.WriteMarkdownIntoLocal(storePath, markdown); err != nil {
+		return fmt.Errorf("confluenceapi: Write to file failed: %w", err)
 	}
 
 	return nil
@@ -104,7 +104,7 @@ func RetrieveContentByID(api conf.API, space data.ConfluenceSpace, id string) (*
 		Expand: []string{"ancestors", "body.view", "links", "version"},
 	})
 	if err != nil {
-		return &data.ConfluenceContent{}, fmt.Errorf("confluence_api: couldn't retrieve object id %s: %w", id, err)
+		return &data.ConfluenceContent{}, fmt.Errorf("confluenceapi: couldn't retrieve object id %s: %w", id, err)
 	}
 
 	return &data.ConfluenceContent{
@@ -126,7 +126,7 @@ func ListAllSpaces(api conf.API, orgName string) (map[string]data.ConfluenceSpac
 		})
 
 		if err != nil {
-			return map[string]data.ConfluenceSpace{}, fmt.Errorf("confluence_api: couldn't list spaces: %w", err)
+			return map[string]data.ConfluenceSpace{}, fmt.Errorf("confluenceapi: couldn't list spaces: %w", err)
 		}
 
 		position += allspaces.Size

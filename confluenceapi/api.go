@@ -1,4 +1,4 @@
-package confluence_api
+package confluenceapi
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ func GetConfluenceAPI(confluence_instance_name string,
 		token,
 	)
 	if err != nil {
-		return &conf.API{}, fmt.Errorf("confluence_api: couldn't create API instance: %w", err)
+		return &conf.API{}, fmt.Errorf("confluenceapi: couldn't create API instance: %w", err)
 	}
 
 	return api, nil

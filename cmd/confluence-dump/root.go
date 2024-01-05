@@ -2,7 +2,7 @@
 Copyright © 2024 paul <paul@denknerd.org>
 */
 
-package cmd
+package main
 
 import (
 	"errors"
