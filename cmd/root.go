@@ -15,31 +15,21 @@ import (
 )
 
 var (
-	CfgFile string
-	Debug   bool
-)
-
-// I'm declaring as vars so I can test easier, I recommend declaring these as constants
-var (
 	// The environment variable prefix of all environment variables bound to our command line flags.
-	// For example, --number is bound to STING_NUMBER.
-	envPrefix = "STING"
+	// For example, --number is bound to CONFLUENCE_DUMP_NUMBER.
+	envPrefix = "CONFLUENCE_DUMP"
 
 	// Replace hyphenated flag names with camelCase in the config file
 	replaceHyphenWithCamelCase = false
-	// Store the result of binding cobra flags and viper config. In a
-	// real application these would be data structures, most likely
-	// custom structs per command. This is simplified for the demo app and is
-	// not recommended that you use one-off variables. The point is that we
-	// aren't retrieving the values directly from viper or flags, we read the values
-	// from standard Go data structures.
-	color  = ""
-	number = 0
+
+	// Store the result of binding cobra flags and viper config.
+	Config       string // this is what the user provides
+	ConfigActual string // this is what Viper ended up loading
+	Debug        bool
 )
 
 // Build the cobra command that handles our command line tool.
 var rootCmd = &cobra.Command{
-
 	Use:   "confluence-dump",
 	Short: "Download the entirety of a Confluence workspace",
 	Long: `
@@ -49,47 +39,39 @@ more, this tool will scrape all of a given Confluence space to a set of local Ma
 
 `,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// You can bind cobra and viper in a few locations, but PersistencePreRunE on the root command works well
-		return initializeConfig(cmd)
+		// You can bind cobra and viper in a few locations, but PersistentPreRunE on the root command works well
+		if err := initializeConfig(cmd); err != nil {
+			return fmt.Errorf("cmd: failed to initialise config: %w", err)
+		}
+		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		// Working with OutOrStdout/OutOrStderr allows us to unit test our command easier
-		out := cmd.OutOrStdout()
-
 		// Print the final resolved value from binding cobra flags and viper config
-		fmt.Fprintln(out, "Config:", CfgFile)
-		fmt.Fprintln(out, "Your favorite color is:", color)
-		fmt.Fprintln(out, "The magic number is:", number)
+		fmt.Println("Config:", Config)
+		fmt.Printf("Debug: %v\n", Debug)
 	},
 }
 
 func init() {
 	// Define cobra flags, the default value has the lowest (least significant) precedence
-	rootCmd.Flags().IntVarP(&number, "number", "n", 7, "What is the magic number?")
-	rootCmd.Flags().StringVarP(&color, "favorite-color", "c", "red", "Should come from flag first, then env var STING_FAVORITE_COLOR then the config file, then the default last")
-	rootCmd.Flags().StringVar(&CfgFile, "config", "", "Should come from flag first, then env var STING_CONFIG, then the default last")
+	rootCmd.Flags().StringVar(&Config, "config", "", "config file location (default: ~/.config/confluence-dump.yaml)")
+	rootCmd.Flags().BoolVar(&Debug, "debug", false, "display debug output")
 }
 
 func initializeConfig(cmd *cobra.Command) error {
 	v := viper.New()
 
-	if CfgFile != "" {
-		fmt.Printf("CfgFile has value! %s\n", CfgFile)
+	if Config != "" {
 		// Use config file from the flag.
-		v.SetConfigFile(CfgFile)
-		// v.SetConfigFile("/Users/pauldavid/src/toothbrush/confluence-dump/confluence-dump.yaml")
+		v.SetConfigFile(Config)
 	} else {
-		fmt.Printf("CfgFile is empty - searching\n")
-		// Search config in home directory with name ".cobra" (without extension).
+		// Search config in home XDG-ish directory
 		v.AddConfigPath("$HOME/.config/")
 		v.SetConfigType("yaml")
 		v.SetConfigName("confluence-dump")
 	}
 
-	fmt.Println("Trying config file:", v.ConfigFileUsed())
-
 	// Attempt to read the config file
-
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			// Config file not found; ignore error if desired
@@ -100,16 +82,17 @@ func initializeConfig(cmd *cobra.Command) error {
 			log.Fatal(fmt.Errorf("Error loading config file: %w", err))
 		}
 	}
-	fmt.Println("Using config file:", v.ConfigFileUsed())
+
+	ConfigActual = v.ConfigFileUsed()
 
 	// When we bind flags to environment variables expect that the
 	// environment variables are prefixed, e.g. a flag like --number
-	// binds to an environment variable STING_NUMBER. This helps
+	// binds to an environment variable CONFLUENCE_DUMP_NUMBER. This helps
 	// avoid conflicts.
 	v.SetEnvPrefix(envPrefix)
 
 	// Environment variables can't have dashes in them, so bind them to their equivalent
-	// keys with underscores, e.g. --favorite-color to STING_FAVORITE_COLOR
+	// keys with underscores, e.g. --favorite-color to CONFLUENCE_DUMP_FAVORITE_COLOR
 	v.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 
 	// Bind to environment variables
@@ -151,8 +134,7 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) error {
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	fmt.Println("called root.Execute")
-	fmt.Printf("config: %s = %v\n", "debug", Debug)
+	// Flags are only available after (or inside, presumably) the .Execute() thing.
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal(err)
