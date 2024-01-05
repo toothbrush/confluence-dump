@@ -163,8 +163,7 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) error {
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	// Flags are only available after (or inside, presumably) the .Execute() thing.
-	err := rootCmd.Execute()
-	if err != nil {
+	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
 	}
 }
