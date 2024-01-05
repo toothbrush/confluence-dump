@@ -34,6 +34,9 @@ func PagePath(page conf.Content, remote_content_cache RemoteContentCache) (Relat
 		// prepend space code, e.g. CORE,
 		path_parts = append([]string{page_metadata.SpaceKey}, path_parts...)
 
+		// prepend org slug, e.g. redbubble,
+		path_parts = append([]string{page_metadata.Org}, path_parts...)
+
 		// append my filename, which is <id>-<slug>.md
 		path_parts = append(path_parts, fmt.Sprintf("%s-%s.md", page_metadata.ID, page_metadata.Slug))
 	} else {

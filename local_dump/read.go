@@ -2,6 +2,7 @@ package local_dump
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -39,9 +40,12 @@ func ParseExistingMarkdown(storePath string, relativePath string) (data.LocalMar
 	}, nil
 }
 
-func LoadLocalMarkdown(storePath string) (data.LocalMarkdownCache, error) {
+// let's scope the markdown-database-loader to a particular space, so that pruning .. makes more
+// sense.
+func LoadLocalMarkdown(storePath string, space data.ConfluenceSpace) (data.LocalMarkdownCache, error) {
+	pathForSpace := path.Join(storePath, space.Org, space.Space.Key)
 	// find files
-	filenames, err := ListAllMarkdownFiles(storePath)
+	filenames, err := ListAllMarkdownFiles(pathForSpace)
 	if err != nil {
 		return data.LocalMarkdownCache{}, fmt.Errorf("local_dump: Error loading Markdown files: %w", err)
 	}
@@ -69,12 +73,24 @@ func LoadLocalMarkdown(storePath string) (data.LocalMarkdownCache, error) {
 	return local_markdown, nil
 }
 
-func ListAllMarkdownFiles(storePath string) ([]string, error) {
+// returns absolute pathnames
+func ListAllMarkdownFiles(inFolder string) ([]string, error) {
+	if _, err := os.Stat(inFolder); err == nil {
+		// path/to/whatever exists
+	} else if errors.Is(err, os.ErrNotExist) {
+		// path/to/whatever does *not* exist; this might mean this is the first time running.
+		return []string{}, nil
+	} else {
+		// some other error
+		return []string{}, fmt.Errorf("local_dump: Error opening %s for file tree walk: %w", inFolder, err)
+	}
+
 	filenames := []string{}
-	err := filepath.Walk(storePath,
+
+	err := filepath.Walk(inFolder,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
-				return fmt.Errorf("local_dump: Error walking file tree: %w", err)
+				return fmt.Errorf("local_dump: Error during file tree walk: %w", err)
 			}
 			if !info.IsDir() && strings.HasSuffix(path, ".md") {
 				filenames = append(filenames, path)
@@ -82,7 +98,7 @@ func ListAllMarkdownFiles(storePath string) ([]string, error) {
 			return nil
 		})
 	if err != nil {
-		return []string{}, fmt.Errorf("local_dump: Error walking file tree: %w", err)
+		return []string{}, fmt.Errorf("local_dump: Error initialising file tree walk: %w", err)
 	}
 
 	return filenames, nil

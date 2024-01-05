@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/mitchellh/go-homedir"
@@ -63,17 +64,17 @@ func runDownload() error {
 		return fmt.Errorf("cmd: Couldn't stat storePath %s: %w", storePath, err)
 	}
 
+	storePathWithOrg := path.Join(storePath, ConfluenceInstance)
+	if err := os.MkdirAll(storePathWithOrg, 0755); err != nil {
+		return fmt.Errorf("local_dump: Couldn't create directory %s: %w", storePathWithOrg, err)
+	}
+
 	token_cmd_output, err := exec.Command(AuthTokenCmd[0], AuthTokenCmd[1:]...).Output()
 	if err != nil {
 		return fmt.Errorf("cmd: Couldn't execute auth-token-cmd '%v': %w", AuthTokenCmd, err)
 	}
 
 	token := strings.Split(string(token_cmd_output), "\n")[0]
-
-	local_markdown, err := local_dump.LoadLocalMarkdown(storePath)
-	if err != nil {
-		return fmt.Errorf("cmd: Couldn't load local Markdown database: %w", err)
-	}
 
 	api, err := confluence_api.GetConfluenceAPI(
 		ConfluenceInstance,
@@ -119,7 +120,7 @@ func runDownload() error {
 	fmt.Printf("Logged in to id.atlassian.com as '%s (%s)'...\n", currentUser.DisplayName, currentUser.AccountID)
 
 	// list all spaces
-	spaces, err := confluence_api.ListAllSpaces(*api)
+	spaces, err := confluence_api.ListAllSpaces(*api, ConfluenceInstance)
 	if err != nil {
 		return fmt.Errorf("cmd: Couldn't list Confluence spaces: %w", err)
 	}
@@ -135,7 +136,7 @@ func runDownload() error {
 		return fmt.Errorf("cmd: Couldn't find space %s", space_to_export)
 	}
 
-	if err := GrabPostsInSpace(*api, space_obj, local_markdown, storePath); err != nil {
+	if err := GrabPostsInSpace(*api, space_obj, storePath); err != nil {
 		return fmt.Errorf("cmd: Couldn't get pages in space %s: %w", space_to_export, err)
 	}
 
@@ -149,7 +150,7 @@ func runDownload() error {
 			Org: ConfluenceInstance,
 		}
 
-		if err := GrabPostsInSpace(*api, blogSpace, local_markdown, storePath); err != nil {
+		if err := GrabPostsInSpace(*api, blogSpace, storePath); err != nil {
 			return fmt.Errorf("cmd: Couldn't get pages in space %s: %w", space_to_export, err)
 		}
 	}
@@ -157,7 +158,12 @@ func runDownload() error {
 	return nil
 }
 
-func GrabPostsInSpace(api conf.API, space_obj data.ConfluenceSpace, local_markdown data.LocalMarkdownCache, storePath string) error {
+func GrabPostsInSpace(api conf.API, space_obj data.ConfluenceSpace, storePath string) error {
+	local_markdown, err := local_dump.LoadLocalMarkdown(storePath, space_obj)
+	if err != nil {
+		return fmt.Errorf("cmd: Couldn't load local Markdown database: %w", err)
+	}
+
 	pages, err := confluence_api.GetAllPagesInSpace(api, space_obj)
 	if err != nil {
 		return fmt.Errorf("cmd: Get all pages in '%s' failed: %w", space_obj.Space.Key, err)

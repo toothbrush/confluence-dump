@@ -113,7 +113,7 @@ func RetrieveContentByID(api conf.API, space data.ConfluenceSpace, id string) (*
 	}, nil
 }
 
-func ListAllSpaces(api conf.API) (map[string]data.ConfluenceSpace, error) {
+func ListAllSpaces(api conf.API, orgName string) (map[string]data.ConfluenceSpace, error) {
 	more := true
 	position := 0
 	spaces := map[string]data.ConfluenceSpace{}
@@ -136,7 +136,7 @@ func ListAllSpaces(api conf.API) (map[string]data.ConfluenceSpace, error) {
 			for _, space := range allspaces.Results {
 				spaces[space.Key] = data.ConfluenceSpace{
 					Space: space,
-					Org:   "foo",
+					Org:   orgName,
 				}
 			}
 			fmt.Fprintf(os.Stderr, "Found %d spaces...\n", position)
