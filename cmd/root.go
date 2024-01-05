@@ -27,53 +27,48 @@ var (
 
 	// Replace hyphenated flag names with camelCase in the config file
 	replaceHyphenWithCamelCase = false
-)
-
-// Build the cobra command that handles our command line tool.
-func NewRootCommand() *cobra.Command {
 	// Store the result of binding cobra flags and viper config. In a
 	// real application these would be data structures, most likely
 	// custom structs per command. This is simplified for the demo app and is
 	// not recommended that you use one-off variables. The point is that we
 	// aren't retrieving the values directly from viper or flags, we read the values
 	// from standard Go data structures.
-	color := ""
-	number := 0
+	color  = ""
+	number = 0
+)
 
-	// Define our command
-	RootCmd := &cobra.Command{
+// Build the cobra command that handles our command line tool.
+var rootCmd = &cobra.Command{
 
-		Use:   "confluence-dump",
-		Short: "Download the entirety of a Confluence workspace",
-		Long: `
+	Use:   "confluence-dump",
+	Short: "Download the entirety of a Confluence workspace",
+	Long: `
 
 Have you ever wanted to use local tools, like fuzzy-search, on a Confluence web workspace?  Wish no
 more, this tool will scrape all of a given Confluence space to a set of local Markdown files.
 
 `,
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			// You can bind cobra and viper in a few locations, but PersistencePreRunE on the root command works well
-			return initializeConfig(cmd)
-		},
-		Run: func(cmd *cobra.Command, args []string) {
-			// Working with OutOrStdout/OutOrStderr allows us to unit test our command easier
-			out := cmd.OutOrStdout()
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// You can bind cobra and viper in a few locations, but PersistencePreRunE on the root command works well
+		return initializeConfig(cmd)
+	},
+	Run: func(cmd *cobra.Command, args []string) {
+		// Working with OutOrStdout/OutOrStderr allows us to unit test our command easier
+		out := cmd.OutOrStdout()
 
-			// Print the final resolved value from binding cobra flags and viper config
-			fmt.Fprintln(out, "Config:", CfgFile)
-			fmt.Fprintln(out, "Your favorite color is:", color)
-			fmt.Fprintln(out, "The magic number is:", number)
-		},
-	}
-
-	// Define cobra flags, the default value has the lowest (least significant) precedence
-	RootCmd.Flags().IntVarP(&number, "number", "n", 7, "What is the magic number?")
-	RootCmd.Flags().StringVarP(&color, "favorite-color", "c", "red", "Should come from flag first, then env var STING_FAVORITE_COLOR then the config file, then the default last")
-	RootCmd.Flags().StringVar(&CfgFile, "config", "", "Should come from flag first, then env var STING_CONFIG, then the default last")
-	return RootCmd
+		// Print the final resolved value from binding cobra flags and viper config
+		fmt.Fprintln(out, "Config:", CfgFile)
+		fmt.Fprintln(out, "Your favorite color is:", color)
+		fmt.Fprintln(out, "The magic number is:", number)
+	},
 }
 
-var RootCmd = NewRootCommand()
+func init() {
+	// Define cobra flags, the default value has the lowest (least significant) precedence
+	rootCmd.Flags().IntVarP(&number, "number", "n", 7, "What is the magic number?")
+	rootCmd.Flags().StringVarP(&color, "favorite-color", "c", "red", "Should come from flag first, then env var STING_FAVORITE_COLOR then the config file, then the default last")
+	rootCmd.Flags().StringVar(&CfgFile, "config", "", "Should come from flag first, then env var STING_CONFIG, then the default last")
+}
 
 func initializeConfig(cmd *cobra.Command) error {
 	v := viper.New()
@@ -151,4 +146,15 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) error {
 	})
 
 	return nil
+}
+
+// Execute adds all child commands to the root command and sets flags appropriately.
+// This is called by main.main(). It only needs to happen once to the rootCmd.
+func Execute() {
+	fmt.Println("called root.Execute")
+	fmt.Printf("config: %s = %v\n", "debug", Debug)
+	err := rootCmd.Execute()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
