@@ -11,26 +11,25 @@ import (
 
 // XXX(pd) 20240104: Hmm, this is a deprecated API? (seen in VCR recording)
 func GetAllPagesByQuery(api conf.API, query conf.ContentQuery) ([]conf.Content, error) {
-	more := true
 	contents := []conf.Content{}
 	position := 0
 
-	for more {
+	for {
 		query.Start = position
 		res, err := api.GetContent(query)
 		if err != nil {
 			return []conf.Content{}, fmt.Errorf("confluenceapi: couldn't retrieve list of contents: %w", err)
 		}
 
-		position += res.Size
-		more = res.Size > 0
-
-		if more {
-			for _, res := range res.Results {
-				contents = append(contents, res)
-			}
-			fmt.Fprintf(os.Stderr, "Fetched %d items...\n", position)
+		if res.Size == 0 {
+			break
 		}
+
+		for _, res := range res.Results {
+			contents = append(contents, res)
+		}
+		position += res.Size
+		fmt.Fprintf(os.Stderr, "Fetched %d items...\n", position)
 	}
 
 	return contents, nil
@@ -114,11 +113,10 @@ func RetrieveContentByID(api conf.API, space data.ConfluenceSpace, id string) (*
 }
 
 func ListAllSpaces(api conf.API, orgName string) (map[string]data.ConfluenceSpace, error) {
-	more := true
 	position := 0
 	spaces := map[string]data.ConfluenceSpace{}
 
-	for more {
+	for {
 		allspaces, err := api.GetAllSpaces(conf.AllSpacesQuery{
 			Type:  "global",
 			Start: position,
@@ -129,18 +127,18 @@ func ListAllSpaces(api conf.API, orgName string) (map[string]data.ConfluenceSpac
 			return map[string]data.ConfluenceSpace{}, fmt.Errorf("confluenceapi: couldn't list spaces: %w", err)
 		}
 
-		position += allspaces.Size
-		more = allspaces.Size > 0
-
-		if more {
-			for _, space := range allspaces.Results {
-				spaces[space.Key] = data.ConfluenceSpace{
-					Space: space,
-					Org:   orgName,
-				}
-			}
-			fmt.Fprintf(os.Stderr, "Found %d spaces...\n", position)
+		if allspaces.Size == 0 {
+			break
 		}
+
+		for _, space := range allspaces.Results {
+			spaces[space.Key] = data.ConfluenceSpace{
+				Space: space,
+				Org:   orgName,
+			}
+		}
+		position += allspaces.Size
+		fmt.Fprintf(os.Stderr, "Found %d spaces...\n", position)
 	}
 
 	return spaces, nil
