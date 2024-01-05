@@ -43,6 +43,48 @@ func GetAllPagesInSpace(api conf.API, space data.ConfluenceSpace) ([]data.Conflu
 	return contents, nil
 }
 
+func GetAllBlogPosts(api conf.API) ([]data.ConfluenceContent, error) {
+	// get content (just metadata) for all blog posts
+	more := true
+	contents := []data.ConfluenceContent{}
+	position := 0
+
+	// phantom "space" for storing blogposts:
+	var blogSpace = data.ConfluenceSpace{
+		Space: conf.Space{
+			Key:  "blogposts",
+			Name: "Placeholder for blogposts",
+		},
+		Org: "fake",
+	}
+
+	for more {
+		res, err := api.GetContent(conf.ContentQuery{
+			Type:   "blogpost",
+			Start:  position,
+			Expand: []string{"version"}, // author is ill-defined... use last-edited version info??
+		})
+		if err != nil {
+			return []data.ConfluenceContent{}, fmt.Errorf("confluence_api: couldn't retrieve list of blogposts: %w", err)
+		}
+
+		position += res.Size
+		more = res.Size > 0
+
+		if more {
+			for _, res := range res.Results {
+				contents = append(contents, data.ConfluenceContent{
+					Space:   blogSpace,
+					Content: res,
+				})
+			}
+			fmt.Fprintf(os.Stderr, "Found %d items in blogposts...\n", position)
+		}
+	}
+
+	return contents, nil
+}
+
 func DownloadIfChanged(always_download bool, api conf.API, content data.ConfluenceContent, remote_title_cache data.RemoteContentCache, local_cache data.LocalMarkdownCache, storePath string) error {
 	stale, err := local_dump.LocalPageIsStale(content.Content.ID, remote_title_cache, local_cache)
 	if err != nil {

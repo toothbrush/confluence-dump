@@ -149,6 +149,24 @@ func runDownload() error {
 		}
 	}
 
+	blogposts, err := confluence_api.GetAllBlogPosts(*api)
+	if err != nil {
+		return fmt.Errorf("cmd: Confluence download failed: %w", err)
+	}
+
+	// build up id to title mapping, so that we can use it to determine the markdown output dir/filename.
+	remote_blogpost_title_cache, err := data.BuildCacheFromPagelist(blogposts)
+	if err != nil {
+		return fmt.Errorf("cmd: Confluence download failed: %w", err)
+	}
+	d_log("Found %d pages on remote...\n", len(remote_blogpost_title_cache))
+
+	for _, page := range blogposts {
+		if err := confluence_api.DownloadIfChanged(AlwaysDownload, *api, page, remote_blogpost_title_cache, local_markdown, storePath); err != nil {
+			return fmt.Errorf("cmd: Confluence download failed: %w", err)
+		}
+	}
+
 	// TODO optionally --prune: Delete local markdown that don't exist on remote.
 
 	return nil
