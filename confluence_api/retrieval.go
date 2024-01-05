@@ -36,7 +36,7 @@ func GetAllPagesInSpace(api conf.API, space data.ConfluenceSpace) ([]data.Conflu
 					Content: res,
 				})
 			}
-			fmt.Fprintf(os.Stderr, "Found %d items in %s...\n", position, space)
+			fmt.Fprintf(os.Stderr, "Found %d items in %s...\n", position, space.Space.Key)
 		}
 	}
 
