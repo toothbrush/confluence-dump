@@ -16,6 +16,11 @@ It has many rough edges still, but here's roughly how you can use it:
 ## TODO
 
 * Parallelise downloading among a few workers
+* Set a base href for Markdown conversion so links work
+* Contexts on slow API calls
+* wrap API in a struct that has a logger and a context
+* remove all prints from anything not in `package main`
+* LocalMarkdownCache map should probably be a field in a in a struct, in preparation for parallel stuff
 
 ## DONE
 
