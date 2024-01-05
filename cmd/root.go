@@ -22,7 +22,7 @@ var (
 	envPrefix = "CONFLUENCE_DUMP"
 
 	// Replace hyphenated flag names with camelCase in the config file
-	replaceHyphenWithCamelCase = true
+	replaceHyphenWithCamelCase = false
 
 	// Store the result of binding cobra flags and viper config.
 	Config       string // this is what the user provides

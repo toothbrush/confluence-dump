@@ -25,16 +25,21 @@ var downloadCmd = &cobra.Command{
 	Short: "Scrape Confluence space and download pages",
 	Long:  `TODO`,
 	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("  AlwaysDownload: %v\n", AlwaysDownload)
 		runDownload()
 	},
 }
+
+var (
+	AlwaysDownload bool
+)
 
 func init() {
 	rootCmd.AddCommand(downloadCmd)
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	downloadCmd.Flags().BoolP("force", "f", false, "Always download all pages regardless of version check")
+	downloadCmd.Flags().BoolVarP(&AlwaysDownload, "always-download", "f", false, "Always download pages, skipping version check")
 }
 
 const REPO_BASE = "~/confluence"
