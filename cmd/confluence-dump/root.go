@@ -7,7 +7,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"reflect"
 	"strings"
@@ -85,11 +84,10 @@ func initializeConfig(cmd *cobra.Command) error {
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			// Config file not found; ignore error if desired
-			fmt.Printf("%v\n", err)
-			log.Fatal("Couldn't read config file.  Use --config to specify, or place in ~/.config/confluence-dump.yaml")
+			return fmt.Errorf("Couldn't read config file.  Use --config to specify, or place in ~/.config/confluence-dump.yaml. %w", err)
 		} else {
 			// Config file was found but another error was produced
-			log.Fatal(fmt.Errorf("Error loading config file: %w", err))
+			return fmt.Errorf("Error loading config file: %w", err)
 		}
 	}
 
@@ -161,9 +159,11 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) error {
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
+func Execute() error {
 	// Flags are only available after (or inside, presumably) the .Execute() thing.
 	if err := rootCmd.Execute(); err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("main: Error executing rootCmd: %w", err)
 	}
+
+	return nil
 }

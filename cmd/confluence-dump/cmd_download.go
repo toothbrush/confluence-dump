@@ -5,7 +5,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -94,7 +93,7 @@ func runDownload() error {
 		}
 		r, err := recorder.NewWithOptions(opts)
 		if err != nil {
-			log.Fatal(fmt.Errorf("cmd: Couldn't set up go-vcr recording: %w", err))
+			return fmt.Errorf("cmd: Couldn't set up go-vcr recording: %w", err)
 		}
 
 		defer r.Stop() // Make sure recorder is stopped once done with it
