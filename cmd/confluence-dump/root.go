@@ -71,7 +71,7 @@ func initializeConfig(cmd *cobra.Command) error {
 		// Use config file from the flag.
 		v.SetConfigFile(Config)
 		if _, err := os.Stat(Config); errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("Specified config file does not exist: %s", Config)
+			return fmt.Errorf("specified config file does not exist: %s", Config)
 		}
 	} else {
 		// Search config in home XDG-ish directory
@@ -84,10 +84,10 @@ func initializeConfig(cmd *cobra.Command) error {
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			// Config file not found; ignore error if desired
-			return fmt.Errorf("Couldn't read config file.  Use --config to specify, or place in ~/.config/confluence-dump.yaml. %w", err)
+			return fmt.Errorf("couldn't read config file; specify with --config, or place ~/.config/confluence-dump.yaml. %w", err)
 		} else {
 			// Config file was found but another error was produced
-			return fmt.Errorf("Error loading config file: %w", err)
+			return fmt.Errorf("couldn't load config file: %w", err)
 		}
 	}
 

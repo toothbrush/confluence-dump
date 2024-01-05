@@ -51,7 +51,7 @@ func init() {
 
 func runDownload() error {
 	if LocalStore == "" {
-		return fmt.Errorf("No location set for local store of Confluence data.  Use --store or set it in your config file.")
+		return fmt.Errorf("cmd: No location for local Confluence store.  Use --store or set it in your config file")
 	}
 
 	storePath, err := homedir.Expand(LocalStore)

@@ -25,9 +25,7 @@ func GetAllPagesByQuery(api conf.API, query conf.ContentQuery) ([]conf.Content, 
 			break
 		}
 
-		for _, res := range res.Results {
-			contents = append(contents, res)
-		}
+		contents = append(contents, res.Results...)
 		position += res.Size
 		fmt.Fprintf(os.Stderr, "Fetched %d items...\n", position)
 	}

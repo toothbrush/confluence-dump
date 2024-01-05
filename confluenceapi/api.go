@@ -11,10 +11,10 @@ func GetConfluenceAPI(confluenceInstanceName string,
 	token string) (*conf.API, error) {
 
 	if confluenceInstanceName == "" {
-		return &conf.API{}, fmt.Errorf("Please configure your Confluence instance name --confluence-instance")
+		return &conf.API{}, fmt.Errorf("configure your Confluence instance name --confluence-instance")
 	}
 	if username == "" {
-		return &conf.API{}, fmt.Errorf("Please configure your Confluence username with --auth-username")
+		return &conf.API{}, fmt.Errorf("configure your Confluence username with --auth-username")
 	}
 
 	api, err := conf.NewAPI(
