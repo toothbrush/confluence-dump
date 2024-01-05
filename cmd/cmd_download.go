@@ -26,13 +26,14 @@ var downloadCmd = &cobra.Command{
 	Short: "Scrape Confluence space and download pages",
 	Long:  `TODO`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Printf("  AlwaysDownload: %v\n", AlwaysDownload)
+		d_log("  AlwaysDownload: %v\n", AlwaysDownload)
 		return runDownload()
 	},
 }
 
 var (
 	AlwaysDownload bool
+	WithVCR        bool
 )
 
 func init() {
@@ -41,6 +42,7 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	downloadCmd.Flags().BoolVarP(&AlwaysDownload, "always-download", "f", false, "Always download pages, skipping version check")
+	downloadCmd.Flags().BoolVar(&WithVCR, "with-vcr", false, "Use go-vcr to cache responses")
 }
 
 func runDownload() error {
@@ -77,30 +79,32 @@ func runDownload() error {
 		return fmt.Errorf("cmd: Confluence download failed: %w", err)
 	}
 
-	// set up VCR recordings.
-	opts := &recorder.Options{
-		CassetteName:       "fixtures/confluence-stuff",
-		Mode:               recorder.ModeReplayWithNewEpisodes,
-		SkipRequestLatency: true,
-		RealTransport:      http.DefaultTransport,
-	}
-	r, err := recorder.NewWithOptions(opts)
-	if err != nil {
-		log.Fatal(fmt.Errorf("couldn't set up go-vcr recording: %w", err))
-	}
+	if WithVCR {
+		// set up VCR recordings.
+		opts := &recorder.Options{
+			CassetteName:       "fixtures/confluence-stuff",
+			Mode:               recorder.ModeReplayWithNewEpisodes,
+			SkipRequestLatency: true,
+			RealTransport:      http.DefaultTransport,
+		}
+		r, err := recorder.NewWithOptions(opts)
+		if err != nil {
+			log.Fatal(fmt.Errorf("couldn't set up go-vcr recording: %w", err))
+		}
 
-	defer r.Stop() // Make sure recorder is stopped once done with it
+		defer r.Stop() // Make sure recorder is stopped once done with it
 
-	// Add a hook which removes Authorization headers from all requests
-	hook := func(i *cassette.Interaction) error {
-		delete(i.Request.Headers, "Authorization")
-		return nil
+		// Add a hook which removes Authorization headers from all requests
+		hook := func(i *cassette.Interaction) error {
+			delete(i.Request.Headers, "Authorization")
+			return nil
+		}
+		r.AddHook(hook, recorder.AfterCaptureHook)
+		r.SetReplayableInteractions(true)
+
+		vcr_client := r.GetDefaultClient()
+		api.Client = vcr_client
 	}
-	r.AddHook(hook, recorder.AfterCaptureHook)
-	r.SetReplayableInteractions(true)
-
-	vcr_client := r.GetDefaultClient()
-	api.Client = vcr_client
 
 	// get current user information
 	currentUser, err := api.CurrentUser()
@@ -117,7 +121,7 @@ func runDownload() error {
 	}
 
 	for _, space := range spaces {
-		fmt.Printf("  - %s: %s\n", space.Key, space.Name)
+		d_log("  - %s: %s\n", space.Key, space.Name)
 	}
 
 	// grab a list of pages from given space
@@ -132,7 +136,7 @@ func runDownload() error {
 	if err != nil {
 		return fmt.Errorf("cmd: Confluence download failed: %w", err)
 	}
-	fmt.Printf("Found %d pages on remote...\n", len(remote_title_cache))
+	d_log("Found %d pages on remote...\n", len(remote_title_cache))
 
 	pages_to_download := local_dump.ChangedPages(remote_title_cache, local_markdown)
 	fmt.Printf("Found %d updated pages to download...\n", len(pages_to_download))
