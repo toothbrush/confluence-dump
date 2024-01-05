@@ -8,10 +8,12 @@ It has many rough edges still, but here's roughly how you can use it:
 1. Get a "Personal Access Token" from your Atlassian account, see
    https://id.atlassian.com/manage-profile/security/api-tokens, and store it safely.  I use the
    `pass` password manager.
-2. Install this tool: `go install -u github.com/toothbrush/confluence-dump`
-3. Create a rudimentary config file at `~/.config/confluence-dump.yaml` (or elsewhere with the
+1. Have a local checkout of this repo
+1. Build the tool: `go build ./cmd/confluence-dump`
+1. Create a rudimentary config file at `~/.config/confluence-dump.yaml` (or elsewhere with the
    `--config` flag) and populate it.  For now the only documentation is the example config file in
    this repo.
+1. Run it! `./confluence-dump` 🎉
 
 ## TODO
 
