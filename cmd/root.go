@@ -5,8 +5,10 @@ Copyright © 2024 paul <paul@denknerd.org>
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -20,7 +22,7 @@ var (
 	envPrefix = "CONFLUENCE_DUMP"
 
 	// Replace hyphenated flag names with camelCase in the config file
-	replaceHyphenWithCamelCase = false
+	replaceHyphenWithCamelCase = true
 
 	// Store the result of binding cobra flags and viper config.
 	Config       string // this is what the user provides
@@ -33,10 +35,8 @@ var rootCmd = &cobra.Command{
 	Use:   "confluence-dump",
 	Short: "Download the entirety of a Confluence workspace",
 	Long: `
-
 Have you ever wanted to use local tools, like fuzzy-search, on a Confluence web workspace?  Wish no
 more, this tool will scrape all of a given Confluence space to a set of local Markdown files.
-
 `,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// You can bind cobra and viper in a few locations, but PersistentPreRunE on the root command works well
@@ -45,17 +45,12 @@ more, this tool will scrape all of a given Confluence space to a set of local Ma
 		}
 		return nil
 	},
-	Run: func(cmd *cobra.Command, args []string) {
-		// Print the final resolved value from binding cobra flags and viper config
-		fmt.Println("Config:", Config)
-		fmt.Printf("Debug: %v\n", Debug)
-	},
 }
 
 func init() {
 	// Define cobra flags, the default value has the lowest (least significant) precedence
-	rootCmd.Flags().StringVar(&Config, "config", "", "config file location (default: ~/.config/confluence-dump.yaml)")
-	rootCmd.Flags().BoolVar(&Debug, "debug", false, "display debug output")
+	rootCmd.PersistentFlags().StringVar(&Config, "config", "", "config file location (default: ~/.config/confluence-dump.yaml)")
+	rootCmd.PersistentFlags().BoolVar(&Debug, "debug", false, "display debug output")
 }
 
 func initializeConfig(cmd *cobra.Command) error {
@@ -64,6 +59,9 @@ func initializeConfig(cmd *cobra.Command) error {
 	if Config != "" {
 		// Use config file from the flag.
 		v.SetConfigFile(Config)
+		if _, err := os.Stat(Config); errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("Specified config file does not exist: %s", Config)
+		}
 	} else {
 		// Search config in home XDG-ish directory
 		v.AddConfigPath("$HOME/.config/")
