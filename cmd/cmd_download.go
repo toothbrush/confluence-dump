@@ -149,5 +149,7 @@ func runDownload() error {
 		}
 	}
 
+	// TODO optionally --prune: Delete local markdown that don't exist on remote.
+
 	return nil
 }
