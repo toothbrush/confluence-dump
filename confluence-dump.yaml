@@ -1,0 +1,31 @@
+---
+# Always redownload / rewrite files to filesystem, even if they look up-to-date.  Useful if you're
+# monkeying with the Markdown output format.
+always-download: true
+
+# VCR replays API requests.  If you enable it, the first request will hit the API server, subsequent
+# requests will be served lightning-fast from your local.  Don't commit the VCR file though, it
+# probably contains all your company's secrets.
+#
+# Note that if you have done something wrong, you might have a cached response that you don't want.
+# Just trash the fixtures/ folder and try again.
+with-vcr: true
+
+# Blog posts are considered by Confluence as separate from spaces, so we deal with them on their
+# own.  Flick this switch to get/not get blog posts downloaded.
+include-blogposts: true
+
+auth-username: paul.david@redbubble.com
+auth-token-cmd:
+  - pass
+  - confluence-api-token/paul.david@redbubble.com
+
+# Where to put downloaded Markdown.  Folders and files will be created like
+# ~/confluence/ORG/SPACE/page/ancestor/123-title.md
+store: ~/confluence
+
+# The name of your Confluence instance.  You can find this in the URL of your Confluence pages, as
+# the subdomain to atlassian.net.
+#
+# Maybe one day this will be a list.
+confluence-instance: redbubble
