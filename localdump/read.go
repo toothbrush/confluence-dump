@@ -82,7 +82,7 @@ func ListAllMarkdownFiles(inFolder string) ([]string, error) {
 		return []string{}, nil
 	} else {
 		// some other error
-		return []string{}, fmt.Errorf("localdump: Error opening %s for file tree walk: %w", inFolder, err)
+		return nil, fmt.Errorf("localdump: Error opening %s for file tree walk: %w", inFolder, err)
 	}
 
 	filenames := []string{}
@@ -98,7 +98,7 @@ func ListAllMarkdownFiles(inFolder string) ([]string, error) {
 			return nil
 		})
 	if err != nil {
-		return []string{}, fmt.Errorf("localdump: Error initialising file tree walk: %w", err)
+		return nil, fmt.Errorf("localdump: Error initialising file tree walk: %w", err)
 	}
 
 	return filenames, nil

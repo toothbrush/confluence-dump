@@ -18,7 +18,7 @@ func GetAllPagesByQuery(api conf.API, query conf.ContentQuery) ([]conf.Content, 
 		query.Start = position
 		res, err := api.GetContent(query)
 		if err != nil {
-			return []conf.Content{}, fmt.Errorf("confluenceapi: couldn't retrieve list of contents: %w", err)
+			return nil, fmt.Errorf("confluenceapi: couldn't retrieve list of contents: %w", err)
 		}
 
 		if res.Size == 0 {
@@ -37,8 +37,6 @@ func GetAllPagesByQuery(api conf.API, query conf.ContentQuery) ([]conf.Content, 
 
 func GetAllPagesInSpace(api conf.API, space data.ConfluenceSpace) ([]data.ConfluenceContent, error) {
 	// get content (just metadata) by space name
-	contents := []data.ConfluenceContent{}
-
 	query := conf.ContentQuery{Expand: []string{"version"}}
 	if space.Space.Key == "blogposts" {
 		// whoops, blogposts are special, they're not in a "space"
@@ -50,9 +48,10 @@ func GetAllPagesInSpace(api conf.API, space data.ConfluenceSpace) ([]data.Conflu
 
 	results, err := GetAllPagesByQuery(api, query)
 	if err != nil {
-		return []data.ConfluenceContent{}, fmt.Errorf("confluenceapi: Failed to retrieve space '%s' contents: %w", space.Space.Key, err)
+		return nil, fmt.Errorf("confluenceapi: Failed to retrieve space '%s' contents: %w", space.Space.Key, err)
 	}
 
+	contents := []data.ConfluenceContent{}
 	for _, res := range results {
 		contents = append(contents, data.ConfluenceContent{
 			Content: res,
@@ -98,15 +97,15 @@ func DownloadIfChanged(alwaysDownload bool, api conf.API, content data.Confluenc
 	return nil
 }
 
-func RetrieveContentByID(api conf.API, space data.ConfluenceSpace, id string) (*data.ConfluenceContent, error) {
+func RetrieveContentByID(api conf.API, space data.ConfluenceSpace, id string) (data.ConfluenceContent, error) {
 	content, err := api.GetContentByID(id, conf.ContentQuery{
 		Expand: []string{"ancestors", "body.view", "links", "version"},
 	})
 	if err != nil {
-		return &data.ConfluenceContent{}, fmt.Errorf("confluenceapi: couldn't retrieve object id %s: %w", id, err)
+		return data.ConfluenceContent{}, fmt.Errorf("confluenceapi: couldn't retrieve object id %s: %w", id, err)
 	}
 
-	return &data.ConfluenceContent{
+	return data.ConfluenceContent{
 		Content: *content,
 		Space:   space,
 	}, nil
@@ -124,7 +123,7 @@ func ListAllSpaces(api conf.API, orgName string) (map[string]data.ConfluenceSpac
 		})
 
 		if err != nil {
-			return map[string]data.ConfluenceSpace{}, fmt.Errorf("confluenceapi: couldn't list spaces: %w", err)
+			return nil, fmt.Errorf("confluenceapi: couldn't list spaces: %w", err)
 		}
 
 		if allspaces.Size == 0 {
