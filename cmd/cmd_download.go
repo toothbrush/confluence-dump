@@ -56,23 +56,23 @@ func runDownload() error {
 
 	storePath, err := homedir.Expand(LocalStore)
 	if err != nil {
-		return fmt.Errorf("cmd: Confluence download failed: %w", err)
+		return fmt.Errorf("cmd: Couldn't expand homedir: %w", err)
 	}
 
 	if _, err := os.Stat(storePath); err != nil {
-		return fmt.Errorf("cmd: Confluence download failed: %w", err)
+		return fmt.Errorf("cmd: Couldn't stat storePath %s: %w", storePath, err)
 	}
 
 	token_cmd_output, err := exec.Command(AuthTokenCmd[0], AuthTokenCmd[1:]...).Output()
 	if err != nil {
-		return fmt.Errorf("cmd: Confluence download failed: %w", err)
+		return fmt.Errorf("cmd: Couldn't execute auth-token-cmd '%v': %w", AuthTokenCmd, err)
 	}
 
 	token := strings.Split(string(token_cmd_output), "\n")[0]
 
 	local_markdown, err := local_dump.LoadLocalMarkdown(storePath)
 	if err != nil {
-		return fmt.Errorf("cmd: Confluence download failed: %w", err)
+		return fmt.Errorf("cmd: Couldn't load local Markdown database: %w", err)
 	}
 
 	api, err := confluence_api.GetConfluenceAPI(
@@ -80,7 +80,7 @@ func runDownload() error {
 		AuthUsername,
 		token)
 	if err != nil {
-		return fmt.Errorf("cmd: Confluence download failed: %w", err)
+		return fmt.Errorf("cmd: Confluence API creation failed: %w", err)
 	}
 
 	if WithVCR {
@@ -93,7 +93,7 @@ func runDownload() error {
 		}
 		r, err := recorder.NewWithOptions(opts)
 		if err != nil {
-			log.Fatal(fmt.Errorf("couldn't set up go-vcr recording: %w", err))
+			log.Fatal(fmt.Errorf("cmd: Couldn't set up go-vcr recording: %w", err))
 		}
 
 		defer r.Stop() // Make sure recorder is stopped once done with it
@@ -113,7 +113,7 @@ func runDownload() error {
 	// get current user information
 	currentUser, err := api.CurrentUser()
 	if err != nil {
-		return fmt.Errorf("cmd: Confluence download failed: %w", err)
+		return fmt.Errorf("cmd: Couldn't query current user: %w", err)
 	}
 
 	fmt.Printf("Logged in to id.atlassian.com as '%s (%s)'...\n", currentUser.DisplayName, currentUser.AccountID)
@@ -121,7 +121,7 @@ func runDownload() error {
 	// list all spaces
 	spaces, err := confluence_api.ListAllSpaces(*api)
 	if err != nil {
-		return fmt.Errorf("cmd: Confluence download failed: %w", err)
+		return fmt.Errorf("cmd: Couldn't list Confluence spaces: %w", err)
 	}
 
 	for _, space := range spaces {
@@ -160,15 +160,15 @@ func runDownload() error {
 func GrabPostsInSpace(api conf.API, space_obj data.ConfluenceSpace, local_markdown data.LocalMarkdownCache, storePath string) error {
 	pages, err := confluence_api.GetAllPagesInSpace(api, space_obj)
 	if err != nil {
-		return fmt.Errorf("cmd: Confluence download failed: %w", err)
+		return fmt.Errorf("cmd: Get all pages in '%s' failed: %w", space_obj.Space.Key, err)
 	}
 
 	// build up id to title mapping, so that we can use it to determine the markdown output dir/filename.
 	remote_title_cache, err := data.BuildCacheFromPagelist(pages)
 	if err != nil {
-		return fmt.Errorf("cmd: Confluence download failed: %w", err)
+		return fmt.Errorf("cmd: Building remote content cache failed: %w", err)
 	}
-	d_log("Found %d pages on remote...\n", len(remote_title_cache))
+	d_log("Found %d remote pages for '%s'...\n", len(remote_title_cache), space_obj.Space.Key)
 
 	for _, page := range pages {
 		if err := confluence_api.DownloadIfChanged(AlwaysDownload, api, page, remote_title_cache, local_markdown, storePath); err != nil {

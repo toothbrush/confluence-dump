@@ -14,11 +14,10 @@ func GetAllPagesByQuery(api conf.API, query conf.ContentQuery) ([]conf.Content, 
 	more := true
 	contents := []conf.Content{}
 	position := 0
-	query_dup := query
 
 	for more {
-		query_dup.Start = position
-		res, err := api.GetContent(query_dup)
+		query.Start = position
+		res, err := api.GetContent(query)
 		if err != nil {
 			return []conf.Content{}, fmt.Errorf("confluence_api: couldn't retrieve list of contents: %w", err)
 		}
