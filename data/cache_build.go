@@ -35,8 +35,8 @@ func BuildCacheFromPagelist(pages []ConfluenceContent) (RemoteContentCache, erro
 		if page.Content.Version == nil {
 			return nil, fmt.Errorf("data: Found nil .Version field for Object ID %s", page.Content.ID)
 		}
-		id_title_mapping[page.Content.ID] = RemoteObjectMetadata{
-			ID:       page.Content.ID,
+		id_title_mapping[ContentID(page.Content.ID)] = RemoteObjectMetadata{
+			ID:       ContentID(page.Content.ID),
 			Title:    page.Content.Title,
 			Slug:     slug,
 			SpaceKey: page.Space.Space.Key,

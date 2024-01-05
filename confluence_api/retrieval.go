@@ -95,7 +95,7 @@ func DownloadIfChanged(always_download bool, api conf.API, content data.Confluen
 		if always_download {
 			fmt.Fprintf(os.Stderr, "Page %s is up-to-date, redownloading anyway because always-download=true...\n", content.Content.ID)
 		} else {
-			if our_item, ok := local_cache[content.Content.ID]; ok {
+			if our_item, ok := local_cache[data.ContentID(content.Content.ID)]; ok {
 				fmt.Fprintf(os.Stderr, "Page %s is up-to-date in '%s', skipping...\n", content.Content.ID, our_item.RelativePath)
 				// early return :/
 				return nil

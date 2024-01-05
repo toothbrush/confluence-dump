@@ -33,8 +33,8 @@ func ParseExistingMarkdown(storePath string, relativePath string) (data.LocalMar
 
 	return data.LocalMarkdown{
 		Content:      string(source),
-		ID:           fmt.Sprintf("%d", header.ObjectId),
-		RelativePath: relativePath,
+		ID:           data.ContentID(fmt.Sprintf("%d", header.ObjectId)),
+		RelativePath: data.RelativePath(relativePath),
 		Version:      header.Version,
 	}, nil
 }
@@ -59,6 +59,10 @@ func LoadLocalMarkdown(storePath string) (data.LocalMarkdownCache, error) {
 			return data.LocalMarkdownCache{}, fmt.Errorf("local_dump: Couldn't load local Markdown file %s: %w", file, err)
 		}
 
+		if _, ok := local_markdown[md.ID]; ok {
+			// oh damn, we have two or more files in the local repo that present the same ID!  warn the user.
+			fmt.Fprintf(os.Stderr, "🚨 WARNING: Found duplicate id %s in file %s!  Undefined behaviour will result.\n", md.ID, md.RelativePath)
+		}
 		local_markdown[md.ID] = md
 	}
 

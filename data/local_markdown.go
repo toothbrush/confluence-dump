@@ -5,21 +5,18 @@ type LocalMarkdown struct {
 	Content string
 
 	// original Confluence ID of the item
-	ID string
+	ID ContentID
 
 	Version int
 
 	// path relative to DUMP location (e.g., ~/confluence)
-	RelativePath string
+	RelativePath RelativePath
 }
 
-// i might want to rename this, because it's meh, but this guy is what we build up based on the info
-// retrieved from Confluence.  we don't want to repeat requests, so once we've 'seen' an ID, we keep
-// some information about it that other pages might need, like titles, for ancestry info.
-type RemoteContentCache map[string]RemoteObjectMetadata
+type LocalMarkdownCache map[ContentID]LocalMarkdown
 
 type RemoteObjectMetadata struct {
-	ID       string
+	ID       ContentID
 	Title    string
 	Slug     string
 	SpaceKey string
@@ -27,4 +24,10 @@ type RemoteObjectMetadata struct {
 	Org      string
 }
 
-type LocalMarkdownCache map[string]LocalMarkdown
+// i might want to rename this, because it's meh, but this guy is what we build up based on the info
+// retrieved from Confluence.  we don't want to repeat requests, so once we've 'seen' an ID, we keep
+// some information about it that other pages might need, like titles, for ancestry info.
+type RemoteContentCache map[ContentID]RemoteObjectMetadata
+
+type ContentID string
+type RelativePath string

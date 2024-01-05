@@ -21,7 +21,7 @@ func WriteMarkdownIntoLocal(storePath string, contents data.LocalMarkdown) error
 	}
 
 	// construct destination path
-	abs := path.Join(storePath, contents.RelativePath)
+	abs := path.Join(storePath, string(contents.RelativePath))
 	directory := path.Dir(abs)
 	// there's probably a nicer way to express 0755 but meh
 	if err = os.MkdirAll(directory, 0755); err != nil {

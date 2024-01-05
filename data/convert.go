@@ -32,7 +32,7 @@ func ConvertToMarkdown(content *conf.Content, metadata_cache RemoteContentCache)
 	ancestor_names := []string{}
 	ancestor_ids := []int{}
 	for _, ancestor := range content.Ancestors {
-		ancestor_metadata, ok := metadata_cache[ancestor.ID]
+		ancestor_metadata, ok := metadata_cache[ContentID(ancestor.ID)]
 		if ok {
 			ancestor_names = append(ancestor_names, ancestor_metadata.Title)
 
@@ -92,9 +92,9 @@ func ConvertToMarkdown(content *conf.Content, metadata_cache RemoteContentCache)
 	}
 
 	return LocalMarkdown{
-		ID:           content.ID,
+		ID:           ContentID(content.ID),
 		Content:      body,
-		RelativePath: relativeOutputPath,
+		RelativePath: RelativePath(relativeOutputPath),
 	}, nil
 }
 

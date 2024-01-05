@@ -7,11 +7,11 @@ import (
 	conf "github.com/virtomize/confluence-go-api"
 )
 
-func PagePath(page conf.Content, id_to_slug RemoteContentCache) (string, error) {
+func PagePath(page conf.Content, remote_content_cache RemoteContentCache) (RelativePath, error) {
 	path_parts := []string{}
 
 	for _, ancestor := range page.Ancestors {
-		if ancestor_metadata, ok := id_to_slug[ancestor.ID]; ok {
+		if ancestor_metadata, ok := remote_content_cache[ContentID(ancestor.ID)]; ok {
 			path_parts = append(path_parts, ancestor_metadata.Slug)
 		} else {
 			// oh no, found an ID with no title mapped!!
@@ -20,7 +20,7 @@ func PagePath(page conf.Content, id_to_slug RemoteContentCache) (string, error) 
 		}
 	}
 
-	if page_metadata, ok := id_to_slug[page.ID]; ok {
+	if page_metadata, ok := remote_content_cache[ContentID(page.ID)]; ok {
 		// if this is a blog post, let's also prepend the author's .. identifier.
 		if page.Type == "blogpost" {
 			userId, err := userId(page)
@@ -41,7 +41,7 @@ func PagePath(page conf.Content, id_to_slug RemoteContentCache) (string, error) 
 		return "", fmt.Errorf("data: Couldn't retrieve page ID %s from cache", page.ID)
 	}
 
-	return path.Join(path_parts...), nil
+	return RelativePath(path.Join(path_parts...)), nil
 }
 
 func userId(page conf.Content) (string, error) {
