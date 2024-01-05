@@ -70,8 +70,8 @@ func runDownload() error {
 	}
 
 	api, err := confluence_api.GetConfluenceAPI(
-		"redbubble",
-		"paul.david@redbubble.com",
+		ConfluenceInstance,
+		AuthUsername,
 		token)
 	if err != nil {
 		return fmt.Errorf("cmd: Confluence download failed: %w", err)
