@@ -121,25 +121,30 @@ func runDownload() error {
 	}
 
 	for _, space := range spaces {
-		d_log("  - %s: %s\n", space.Key, space.Name)
+		d_log("  - %s: %s\n", space.Space.Key, space.Space.Name)
 	}
 
 	// grab a list of pages from given space
 	space_to_export := "CORE"
-	pages, err := confluence_api.GetAllPagesInSpace(*api, space_to_export)
+	space_obj, ok := spaces[space_to_export]
+	if !ok {
+		return fmt.Errorf("cmd: Couldn't find space %s", space_to_export)
+	}
+
+	pages, err := confluence_api.GetAllPagesInSpace(*api, space_obj)
 	if err != nil {
 		return fmt.Errorf("cmd: Confluence download failed: %w", err)
 	}
 
 	// build up id to title mapping, so that we can use it to determine the markdown output dir/filename.
-	remote_title_cache, err := data.BuildCacheFromPagelist(pages, space_to_export)
+	remote_title_cache, err := data.BuildCacheFromPagelist(pages)
 	if err != nil {
 		return fmt.Errorf("cmd: Confluence download failed: %w", err)
 	}
 	d_log("Found %d pages on remote...\n", len(remote_title_cache))
 
 	for _, page := range pages {
-		if err := confluence_api.DownloadIfChanged(AlwaysDownload, *api, page.ID, remote_title_cache, local_markdown, storePath); err != nil {
+		if err := confluence_api.DownloadIfChanged(AlwaysDownload, *api, page, remote_title_cache, local_markdown, storePath); err != nil {
 			return fmt.Errorf("cmd: Confluence download failed: %w", err)
 		}
 	}

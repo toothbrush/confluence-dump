@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-
-	conf "github.com/virtomize/confluence-go-api"
 )
 
 func canonicalise(title string) (string, error) {
@@ -26,23 +24,24 @@ func canonicalise(title string) (string, error) {
 	return str, nil
 }
 
-func BuildCacheFromPagelist(pages []conf.Content, space_key string) (RemoteContentCache, error) {
+func BuildCacheFromPagelist(pages []ConfluenceContent) (RemoteContentCache, error) {
 	id_title_mapping := make(RemoteContentCache)
 
 	for _, page := range pages {
-		slug, err := canonicalise(page.Title)
+		slug, err := canonicalise(page.Content.Title)
 		if err != nil {
 			return nil, fmt.Errorf("data: Couldn't derive slug: %w", err)
 		}
-		if page.Version == nil {
-			return nil, fmt.Errorf("data: Found nil .Version field for Object ID %s", page.ID)
+		if page.Content.Version == nil {
+			return nil, fmt.Errorf("data: Found nil .Version field for Object ID %s", page.Content.ID)
 		}
-		id_title_mapping[page.ID] = RemoteObjectMetadata{
-			ID:       page.ID,
-			Title:    page.Title,
+		id_title_mapping[page.Content.ID] = RemoteObjectMetadata{
+			ID:       page.Content.ID,
+			Title:    page.Content.Title,
 			Slug:     slug,
-			SpaceKey: space_key,
-			Version:  page.Version.Number,
+			SpaceKey: page.Space.Space.Key,
+			Version:  page.Content.Version.Number,
+			Org:      page.Space.Org,
 		}
 	}
 

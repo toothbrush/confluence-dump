@@ -24,6 +24,7 @@ type RemoteObjectMetadata struct {
 	Slug     string
 	SpaceKey string
 	Version  int
+	Org      string
 }
 
 type LocalMarkdownCache map[string]LocalMarkdown

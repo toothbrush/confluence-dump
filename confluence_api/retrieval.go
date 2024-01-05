@@ -10,27 +10,32 @@ import (
 )
 
 // XXX(pd) 20240104: Hmm, this is a deprecated API? (seen in VCR recording)
-func GetAllPagesInSpace(api conf.API, space string) ([]conf.Content, error) {
+func GetAllPagesInSpace(api conf.API, space data.ConfluenceSpace) ([]data.ConfluenceContent, error) {
 	// get content (just metadata) by space name
 	more := true
-	contents := []conf.Content{}
+	contents := []data.ConfluenceContent{}
 	position := 0
 
 	for more {
 		res, err := api.GetContent(conf.ContentQuery{
-			SpaceKey: space,
+			SpaceKey: space.Space.Key,
 			Start:    position,
 			Expand:   []string{"version"},
 		})
 		if err != nil {
-			return []conf.Content{}, fmt.Errorf("confluence_api: couldn't retrieve list of contents: %w", err)
+			return []data.ConfluenceContent{}, fmt.Errorf("confluence_api: couldn't retrieve list of contents: %w", err)
 		}
 
 		position += res.Size
 		more = res.Size > 0
 
 		if more {
-			contents = append(contents, res.Results...)
+			for _, res := range res.Results {
+				contents = append(contents, data.ConfluenceContent{
+					Space:   space,
+					Content: res,
+				})
+			}
 			fmt.Fprintf(os.Stderr, "Found %d items in %s...\n", position, space)
 		}
 	}
@@ -38,29 +43,30 @@ func GetAllPagesInSpace(api conf.API, space string) ([]conf.Content, error) {
 	return contents, nil
 }
 
-func DownloadIfChanged(always_download bool, api conf.API, id string, remote_title_cache data.RemoteContentCache, local_cache data.LocalMarkdownCache, storePath string) error {
-	stale, err := local_dump.LocalPageIsStale(id, remote_title_cache, local_cache)
+func DownloadIfChanged(always_download bool, api conf.API, content data.ConfluenceContent, remote_title_cache data.RemoteContentCache, local_cache data.LocalMarkdownCache, storePath string) error {
+	stale, err := local_dump.LocalPageIsStale(content.Content.ID, remote_title_cache, local_cache)
 	if err != nil {
 		return fmt.Errorf("confluence_api: Staleness check failed: %w", err)
 	}
 
 	if !stale {
 		if always_download {
-			fmt.Fprintf(os.Stderr, "Page %s is up-to-date, redownloading anyway because always-download=true...\n", id)
+			fmt.Fprintf(os.Stderr, "Page %s is up-to-date, redownloading anyway because always-download=true...\n", content.Content.ID)
 		} else {
-			if our_item, ok := local_cache[id]; ok {
-				fmt.Fprintf(os.Stderr, "Page %s is up-to-date in '%s', skipping...\n", id, our_item.RelativePath)
+			if our_item, ok := local_cache[content.Content.ID]; ok {
+				fmt.Fprintf(os.Stderr, "Page %s is up-to-date in '%s', skipping...\n", content.Content.ID, our_item.RelativePath)
+				// early return :/
 				return nil
 			}
 		}
 	}
 
-	c, err := RetrieveContentByID(api, id)
+	c, err := RetrieveContentByID(api, content.Space, content.Content.ID)
 	if err != nil {
 		return fmt.Errorf("confluence_api: Confluence download failed: %w", err)
 	}
 
-	markdown, err := data.ConvertToMarkdown(c, remote_title_cache)
+	markdown, err := data.ConvertToMarkdown(&c.Content, remote_title_cache)
 	if err != nil {
 		return fmt.Errorf("confluence_api: Convert to Markdown failed: %w", err)
 	}
@@ -72,21 +78,24 @@ func DownloadIfChanged(always_download bool, api conf.API, id string, remote_tit
 	return nil
 }
 
-func RetrieveContentByID(api conf.API, id string) (*conf.Content, error) {
+func RetrieveContentByID(api conf.API, space data.ConfluenceSpace, id string) (*data.ConfluenceContent, error) {
 	content, err := api.GetContentByID(id, conf.ContentQuery{
 		Expand: []string{"ancestors", "body.view", "links", "version"},
 	})
 	if err != nil {
-		return &conf.Content{}, fmt.Errorf("confluence_api: couldn't retrieve object id %s: %w", id, err)
+		return &data.ConfluenceContent{}, fmt.Errorf("confluence_api: couldn't retrieve object id %s: %w", id, err)
 	}
 
-	return content, nil
+	return &data.ConfluenceContent{
+		Content: *content,
+		Space:   space,
+	}, nil
 }
 
-func ListAllSpaces(api conf.API) ([]conf.Space, error) {
+func ListAllSpaces(api conf.API) (map[string]data.ConfluenceSpace, error) {
 	more := true
 	position := 0
-	spaces := []conf.Space{}
+	spaces := map[string]data.ConfluenceSpace{}
 
 	for more {
 		allspaces, err := api.GetAllSpaces(conf.AllSpacesQuery{
@@ -96,7 +105,7 @@ func ListAllSpaces(api conf.API) ([]conf.Space, error) {
 		})
 
 		if err != nil {
-			return []conf.Space{}, fmt.Errorf("confluence_api: couldn't list spaces: %w", err)
+			return map[string]data.ConfluenceSpace{}, fmt.Errorf("confluence_api: couldn't list spaces: %w", err)
 		}
 
 		position += allspaces.Size
@@ -104,7 +113,10 @@ func ListAllSpaces(api conf.API) ([]conf.Space, error) {
 
 		if more {
 			for _, space := range allspaces.Results {
-				spaces = append(spaces, space)
+				spaces[space.Key] = data.ConfluenceSpace{
+					Space: space,
+					Org:   "foo",
+				}
 			}
 			fmt.Fprintf(os.Stderr, "Found %d spaces...\n", position)
 		}
