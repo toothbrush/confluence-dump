@@ -54,7 +54,7 @@ func init() {
 }
 
 func initializeConfig(cmd *cobra.Command) error {
-	v := viper.New()
+	v := viper.GetViper()
 
 	if Config != "" {
 		// Use config file from the flag.
