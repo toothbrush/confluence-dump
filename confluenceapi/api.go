@@ -6,11 +6,11 @@ import (
 	conf "github.com/virtomize/confluence-go-api"
 )
 
-func GetConfluenceAPI(confluence_instance_name string,
+func GetConfluenceAPI(confluenceInstanceName string,
 	username string,
 	token string) (*conf.API, error) {
 
-	if confluence_instance_name == "" {
+	if confluenceInstanceName == "" {
 		return &conf.API{}, fmt.Errorf("Please configure your Confluence instance name --confluence-instance")
 	}
 	if username == "" {
@@ -18,7 +18,7 @@ func GetConfluenceAPI(confluence_instance_name string,
 	}
 
 	api, err := conf.NewAPI(
-		fmt.Sprintf("https://%s.atlassian.net/wiki/rest/api", confluence_instance_name),
+		fmt.Sprintf("https://%s.atlassian.net/wiki/rest/api", confluenceInstanceName),
 		username,
 		token,
 	)

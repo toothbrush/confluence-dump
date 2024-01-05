@@ -6,13 +6,13 @@ import (
 	"github.com/toothbrush/confluence-dump/data"
 )
 
-func LocalPageIsStale(content data.ConfluenceContent, remote_cache data.RemoteContentCache, local_files data.LocalMarkdownCache) (bool, error) {
+func LocalPageIsStale(content data.ConfluenceContent, remoteCache data.RemoteContentCache, localFiles data.LocalMarkdownCache) (bool, error) {
 	id := data.ContentID(content.Content.ID)
 
-	if remote, ok := remote_cache[id]; ok {
-		if our_item, ok := local_files[id]; ok {
+	if remote, ok := remoteCache[id]; ok {
+		if ourItem, ok := localFiles[id]; ok {
 			// ok, we _are_ aware of it.  how about the version?
-			if our_item.Version == remote.Version {
+			if ourItem.Version == remote.Version {
 				// oh, we know about it, and it's the same version! nothing to do here.
 				return false, nil
 			} else {

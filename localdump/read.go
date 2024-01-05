@@ -50,7 +50,7 @@ func LoadLocalMarkdown(storePath string, space data.ConfluenceSpace) (data.Local
 		return data.LocalMarkdownCache{}, fmt.Errorf("localdump: Error loading Markdown files: %w", err)
 	}
 
-	local_markdown := data.LocalMarkdownCache{}
+	localMarkdownCache := data.LocalMarkdownCache{}
 	// parse each file
 	for _, file := range filenames {
 		rel, err := filepath.Rel(storePath, file)
@@ -63,14 +63,14 @@ func LoadLocalMarkdown(storePath string, space data.ConfluenceSpace) (data.Local
 			return data.LocalMarkdownCache{}, fmt.Errorf("localdump: Couldn't load local Markdown file %s: %w", file, err)
 		}
 
-		if _, ok := local_markdown[md.ID]; ok {
+		if _, ok := localMarkdownCache[md.ID]; ok {
 			// oh damn, we have two or more files in the local repo that present the same ID!  warn the user.
 			fmt.Fprintf(os.Stderr, "🚨 WARNING: Found duplicate id %s in file %s!  Undefined behaviour will result.\n", md.ID, md.RelativePath)
 		}
-		local_markdown[md.ID] = md
+		localMarkdownCache[md.ID] = md
 	}
 
-	return local_markdown, nil
+	return localMarkdownCache, nil
 }
 
 // returns absolute pathnames

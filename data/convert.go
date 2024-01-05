@@ -7,15 +7,15 @@ import (
 	"time"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
-	md_plugin "github.com/JohannesKaufmann/html-to-markdown/plugin"
+	mdplugin "github.com/JohannesKaufmann/html-to-markdown/plugin"
 	conf "github.com/virtomize/confluence-go-api"
 	"gopkg.in/yaml.v3"
 )
 
-func ConvertToMarkdown(content *conf.Content, metadata_cache RemoteContentCache) (LocalMarkdown, error) {
+func ConvertToMarkdown(content *conf.Content, metadataCache RemoteContentCache) (LocalMarkdown, error) {
 	converter := md.NewConverter("", true, nil)
 	// Github flavoured Markdown knows about tables 👍
-	converter.Use(md_plugin.GitHubFlavored())
+	converter.Use(mdplugin.GitHubFlavored())
 	if content.Body.View == nil {
 		return LocalMarkdown{}, fmt.Errorf("data: Found nil .Body.View field for Object ID %s", content.ID)
 	}
@@ -23,24 +23,24 @@ func ConvertToMarkdown(content *conf.Content, metadata_cache RemoteContentCache)
 	if err != nil {
 		return LocalMarkdown{}, fmt.Errorf("data: Failed to convert to Markdown: %w", err)
 	}
-	item_web_uri := content.Links.Base + content.Links.WebUI
+	itemWebURI := content.Links.Base + content.Links.WebUI
 
 	// Are we able to set a base for all URLs?  Currently the Markdown has things like
 	// '/wiki/spaces/DRE/pages/2946695376/Tools+and+Infrastructure' which are a bit un ergonomic.
 	// we could (fancy mode) resolve to a link in the local dump or (grug mode) just add the
 	// https://redbubble.atlassian.net base URL.
-	ancestor_names := []string{}
-	ancestor_ids := []int{}
+	ancestorNames := []string{}
+	ancestorIDs := []int{}
 	for _, ancestor := range content.Ancestors {
-		ancestor_metadata, ok := metadata_cache[ContentID(ancestor.ID)]
+		ancestorMetadata, ok := metadataCache[ContentID(ancestor.ID)]
 		if ok {
-			ancestor_names = append(ancestor_names, ancestor_metadata.Title)
+			ancestorNames = append(ancestorNames, ancestorMetadata.Title)
 
-			ancestor_id, err := strconv.Atoi(ancestor.ID)
+			ancestorID, err := strconv.Atoi(ancestor.ID)
 			if err != nil {
 				return LocalMarkdown{}, fmt.Errorf("data: Object ID %s not an int: %w", ancestor.ID, err)
 			}
-			ancestor_ids = append(ancestor_ids, ancestor_id)
+			ancestorIDs = append(ancestorIDs, ancestorID)
 		} else {
 			// oh no, found an ID with no title mapped!!
 			return LocalMarkdown{}, fmt.Errorf("data: Found an ID reference we haven't seen before! %s", ancestor.ID)
@@ -64,14 +64,14 @@ func ConvertToMarkdown(content *conf.Content, metadata_cache RemoteContentCache)
 		Timestamp:     timestamp,
 		Version:       content.Version.Number,
 		ObjectID:      id,
-		URI:           item_web_uri,
+		URI:           itemWebURI,
 		Status:        content.Status,
 		ObjectType:    content.Type,
-		AncestorNames: ancestor_names,
-		AncestorIDs:   ancestor_ids,
+		AncestorNames: ancestorNames,
+		AncestorIDs:   ancestorIDs,
 	}
 
-	yaml_header, err := yaml.Marshal(header)
+	yamlHeader, err := yaml.Marshal(header)
 	if err != nil {
 		return LocalMarkdown{}, fmt.Errorf("data: Couldn't marshal header YAML: %w", err)
 	}
@@ -83,10 +83,10 @@ func ConvertToMarkdown(content *conf.Content, metadata_cache RemoteContentCache)
 ---
 %s
 `,
-		strings.TrimSpace(string(yaml_header)),
+		strings.TrimSpace(string(yamlHeader)),
 		markdown)
 
-	relativeOutputPath, err := PagePath(*content, metadata_cache)
+	relativeOutputPath, err := PagePath(*content, metadataCache)
 	if err != nil {
 		return LocalMarkdown{}, fmt.Errorf("data: Couldn't determine page path: %w", err)
 	}

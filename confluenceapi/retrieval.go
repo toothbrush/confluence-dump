@@ -63,18 +63,18 @@ func GetAllPagesInSpace(api conf.API, space data.ConfluenceSpace) ([]data.Conflu
 	return contents, nil
 }
 
-func DownloadIfChanged(always_download bool, api conf.API, content data.ConfluenceContent, remote_title_cache data.RemoteContentCache, local_cache data.LocalMarkdownCache, storePath string) error {
-	stale, err := localdump.LocalPageIsStale(content, remote_title_cache, local_cache)
+func DownloadIfChanged(alwaysDownload bool, api conf.API, content data.ConfluenceContent, remoteContentCache data.RemoteContentCache, localMarkdownCache data.LocalMarkdownCache, storePath string) error {
+	stale, err := localdump.LocalPageIsStale(content, remoteContentCache, localMarkdownCache)
 	if err != nil {
 		return fmt.Errorf("confluenceapi: Staleness check failed: %w", err)
 	}
 
 	if !stale {
-		if always_download {
+		if alwaysDownload {
 			fmt.Fprintf(os.Stderr, "Page %s is up-to-date, redownloading anyway because always-download=true...\n", content.Content.ID)
 		} else {
-			if our_item, ok := local_cache[data.ContentID(content.Content.ID)]; ok {
-				fmt.Fprintf(os.Stderr, "Page %s is up-to-date in '%s', skipping...\n", content.Content.ID, our_item.RelativePath)
+			if ourItem, ok := localMarkdownCache[data.ContentID(content.Content.ID)]; ok {
+				fmt.Fprintf(os.Stderr, "Page %s is up-to-date in '%s', skipping...\n", content.Content.ID, ourItem.RelativePath)
 				// early return :/
 				return nil
 			}
@@ -86,7 +86,7 @@ func DownloadIfChanged(always_download bool, api conf.API, content data.Confluen
 		return fmt.Errorf("confluenceapi: Confluence download failed: %w", err)
 	}
 
-	markdown, err := data.ConvertToMarkdown(&c.Content, remote_title_cache)
+	markdown, err := data.ConvertToMarkdown(&c.Content, remoteContentCache)
 	if err != nil {
 		return fmt.Errorf("confluenceapi: Convert to Markdown failed: %w", err)
 	}

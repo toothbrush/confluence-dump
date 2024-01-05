@@ -28,7 +28,7 @@ var downloadCmd = &cobra.Command{
 	Short: "Scrape Confluence space and download pages",
 	Long:  `TODO`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		d_log("  AlwaysDownload: %v\n", AlwaysDownload)
+		debugLog("  AlwaysDownload: %v\n", AlwaysDownload)
 		return runDownload()
 	},
 }
@@ -68,12 +68,12 @@ func runDownload() error {
 		return fmt.Errorf("localdump: Couldn't create directory %s: %w", storePathWithOrg, err)
 	}
 
-	token_cmd_output, err := exec.Command(AuthTokenCmd[0], AuthTokenCmd[1:]...).Output()
+	tokenCmdOutput, err := exec.Command(AuthTokenCmd[0], AuthTokenCmd[1:]...).Output()
 	if err != nil {
 		return fmt.Errorf("cmd: Couldn't execute auth-token-cmd '%v': %w", AuthTokenCmd, err)
 	}
 
-	token := strings.Split(string(token_cmd_output), "\n")[0]
+	token := strings.Split(string(tokenCmdOutput), "\n")[0]
 
 	api, err := confluenceapi.GetConfluenceAPI(
 		ConfluenceInstance,
@@ -106,8 +106,8 @@ func runDownload() error {
 		r.AddHook(hook, recorder.AfterCaptureHook)
 		r.SetReplayableInteractions(true)
 
-		vcr_client := r.GetDefaultClient()
-		api.Client = vcr_client
+		vcrClient := r.GetDefaultClient()
+		api.Client = vcrClient
 	}
 
 	// get current user information
@@ -125,18 +125,18 @@ func runDownload() error {
 	}
 
 	for _, space := range spaces {
-		d_log("  - %s: %s\n", space.Space.Key, space.Space.Name)
+		debugLog("  - %s: %s\n", space.Space.Key, space.Space.Name)
 	}
 
 	// grab a list of pages from given space
-	space_to_export := "CORE"
-	space_obj, ok := spaces[space_to_export]
+	spaceToExport := "CORE"
+	spaceObj, ok := spaces[spaceToExport]
 	if !ok {
-		return fmt.Errorf("cmd: Couldn't find space %s", space_to_export)
+		return fmt.Errorf("cmd: Couldn't find space %s", spaceToExport)
 	}
 
-	if err := GrabPostsInSpace(*api, space_obj, storePath); err != nil {
-		return fmt.Errorf("cmd: Couldn't get pages in space %s: %w", space_to_export, err)
+	if err := GrabPostsInSpace(*api, spaceObj, storePath); err != nil {
+		return fmt.Errorf("cmd: Couldn't get pages in space %s: %w", spaceToExport, err)
 	}
 
 	if IncludeBlogposts {
@@ -150,33 +150,33 @@ func runDownload() error {
 		}
 
 		if err := GrabPostsInSpace(*api, blogSpace, storePath); err != nil {
-			return fmt.Errorf("cmd: Couldn't get pages in space %s: %w", space_to_export, err)
+			return fmt.Errorf("cmd: Couldn't get pages in space %s: %w", spaceToExport, err)
 		}
 	}
 
 	return nil
 }
 
-func GrabPostsInSpace(api conf.API, space_obj data.ConfluenceSpace, storePath string) error {
-	local_markdown, err := localdump.LoadLocalMarkdown(storePath, space_obj)
+func GrabPostsInSpace(api conf.API, spaceObj data.ConfluenceSpace, storePath string) error {
+	localMarkdown, err := localdump.LoadLocalMarkdown(storePath, spaceObj)
 	if err != nil {
 		return fmt.Errorf("cmd: Couldn't load local Markdown database: %w", err)
 	}
 
-	pages, err := confluenceapi.GetAllPagesInSpace(api, space_obj)
+	pages, err := confluenceapi.GetAllPagesInSpace(api, spaceObj)
 	if err != nil {
-		return fmt.Errorf("cmd: Get all pages in '%s' failed: %w", space_obj.Space.Key, err)
+		return fmt.Errorf("cmd: Get all pages in '%s' failed: %w", spaceObj.Space.Key, err)
 	}
 
 	// build up id to title mapping, so that we can use it to determine the markdown output dir/filename.
-	remote_title_cache, err := data.BuildCacheFromPagelist(pages)
+	remoteContentCache, err := data.BuildCacheFromPagelist(pages)
 	if err != nil {
 		return fmt.Errorf("cmd: Building remote content cache failed: %w", err)
 	}
-	d_log("Found %d remote pages for '%s'...\n", len(remote_title_cache), space_obj.Space.Key)
+	debugLog("Found %d remote pages for '%s'...\n", len(remoteContentCache), spaceObj.Space.Key)
 
 	for _, page := range pages {
-		if err := confluenceapi.DownloadIfChanged(AlwaysDownload, api, page, remote_title_cache, local_markdown, storePath); err != nil {
+		if err := confluenceapi.DownloadIfChanged(AlwaysDownload, api, page, remoteContentCache, localMarkdown, storePath); err != nil {
 			return fmt.Errorf("cmd: Confluence download failed: %w", err)
 		}
 	}

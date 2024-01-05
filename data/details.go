@@ -7,12 +7,12 @@ import (
 	conf "github.com/virtomize/confluence-go-api"
 )
 
-func PagePath(page conf.Content, remote_content_cache RemoteContentCache) (RelativePath, error) {
-	path_parts := []string{}
+func PagePath(page conf.Content, remoteContentCache RemoteContentCache) (RelativePath, error) {
+	pathParts := []string{}
 
 	for _, ancestor := range page.Ancestors {
-		if ancestor_metadata, ok := remote_content_cache[ContentID(ancestor.ID)]; ok {
-			path_parts = append(path_parts, ancestor_metadata.Slug)
+		if ancestorMetadata, ok := remoteContentCache[ContentID(ancestor.ID)]; ok {
+			pathParts = append(pathParts, ancestorMetadata.Slug)
 		} else {
 			// oh no, found an ID with no title mapped!!
 			// this .. should never happen.  We'll see.
@@ -20,7 +20,7 @@ func PagePath(page conf.Content, remote_content_cache RemoteContentCache) (Relat
 		}
 	}
 
-	if page_metadata, ok := remote_content_cache[ContentID(page.ID)]; ok {
+	if pageMetadata, ok := remoteContentCache[ContentID(page.ID)]; ok {
 		// if this is a blog post, let's also prepend the author's .. identifier.
 		if page.Type == "blogpost" {
 			userID, err := userID(page)
@@ -28,23 +28,23 @@ func PagePath(page conf.Content, remote_content_cache RemoteContentCache) (Relat
 				return "", fmt.Errorf("data: failed to determine user's identity: %w", err)
 			}
 
-			path_parts = append([]string{userID}, path_parts...)
+			pathParts = append([]string{userID}, pathParts...)
 		}
 
 		// prepend space code, e.g. CORE,
-		path_parts = append([]string{page_metadata.SpaceKey}, path_parts...)
+		pathParts = append([]string{pageMetadata.SpaceKey}, pathParts...)
 
 		// prepend org slug, e.g. redbubble,
-		path_parts = append([]string{page_metadata.Org}, path_parts...)
+		pathParts = append([]string{pageMetadata.Org}, pathParts...)
 
 		// append my filename, which is <id>-<slug>.md
-		path_parts = append(path_parts, fmt.Sprintf("%s-%s.md", page_metadata.ID, page_metadata.Slug))
+		pathParts = append(pathParts, fmt.Sprintf("%s-%s.md", pageMetadata.ID, pageMetadata.Slug))
 	} else {
 		// oh no, our own ID isn't in the mapping?
 		return "", fmt.Errorf("data: Couldn't retrieve page ID %s from cache", page.ID)
 	}
 
-	return RelativePath(path.Join(path_parts...)), nil
+	return RelativePath(path.Join(pathParts...)), nil
 }
 
 func userID(page conf.Content) (string, error) {
