@@ -18,6 +18,8 @@ import (
 	"github.com/toothbrush/confluence-dump/local_dump"
 	"gopkg.in/dnaeon/go-vcr.v3/cassette"
 	"gopkg.in/dnaeon/go-vcr.v3/recorder"
+
+	conf "github.com/virtomize/confluence-go-api"
 )
 
 // downloadCmd represents the download command
@@ -32,8 +34,9 @@ var downloadCmd = &cobra.Command{
 }
 
 var (
-	AlwaysDownload bool
-	WithVCR        bool
+	AlwaysDownload   bool
+	WithVCR          bool
+	IncludeBlogposts bool
 )
 
 func init() {
@@ -41,8 +44,9 @@ func init() {
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	downloadCmd.Flags().BoolVarP(&AlwaysDownload, "always-download", "f", false, "Always download pages, skipping version check")
-	downloadCmd.Flags().BoolVar(&WithVCR, "with-vcr", false, "Use go-vcr to cache responses")
+	downloadCmd.Flags().BoolVarP(&AlwaysDownload, "always-download", "f", false, "always download pages, skipping version check")
+	downloadCmd.Flags().BoolVar(&WithVCR, "with-vcr", false, "use go-vcr to cache responses")
+	downloadCmd.Flags().BoolVar(&IncludeBlogposts, "include-blogposts", false, "download blogposts as well as usual posts")
 }
 
 func runDownload() error {
@@ -131,7 +135,30 @@ func runDownload() error {
 		return fmt.Errorf("cmd: Couldn't find space %s", space_to_export)
 	}
 
-	pages, err := confluence_api.GetAllPagesInSpace(*api, space_obj)
+	if err := GrabPostsInSpace(*api, space_obj, local_markdown, storePath); err != nil {
+		return fmt.Errorf("cmd: Couldn't get pages in space %s: %w", space_to_export, err)
+	}
+
+	if IncludeBlogposts {
+		// phantom "space" for storing blogposts:
+		var blogSpace = data.ConfluenceSpace{
+			Space: conf.Space{
+				Key:  "blogposts",
+				Name: "Placeholder for blogposts",
+			},
+			Org: ConfluenceInstance,
+		}
+
+		if err := GrabPostsInSpace(*api, blogSpace, local_markdown, storePath); err != nil {
+			return fmt.Errorf("cmd: Couldn't get pages in space %s: %w", space_to_export, err)
+		}
+	}
+
+	return nil
+}
+
+func GrabPostsInSpace(api conf.API, space_obj data.ConfluenceSpace, local_markdown data.LocalMarkdownCache, storePath string) error {
+	pages, err := confluence_api.GetAllPagesInSpace(api, space_obj)
 	if err != nil {
 		return fmt.Errorf("cmd: Confluence download failed: %w", err)
 	}
@@ -144,30 +171,11 @@ func runDownload() error {
 	d_log("Found %d pages on remote...\n", len(remote_title_cache))
 
 	for _, page := range pages {
-		if err := confluence_api.DownloadIfChanged(AlwaysDownload, *api, page, remote_title_cache, local_markdown, storePath); err != nil {
-			return fmt.Errorf("cmd: Confluence download failed: %w", err)
-		}
-	}
-
-	blogposts, err := confluence_api.GetAllBlogPosts(*api)
-	if err != nil {
-		return fmt.Errorf("cmd: Confluence download failed: %w", err)
-	}
-
-	// build up id to title mapping, so that we can use it to determine the markdown output dir/filename.
-	remote_blogpost_title_cache, err := data.BuildCacheFromPagelist(blogposts)
-	if err != nil {
-		return fmt.Errorf("cmd: Confluence download failed: %w", err)
-	}
-	d_log("Found %d pages on remote...\n", len(remote_blogpost_title_cache))
-
-	for _, page := range blogposts {
-		if err := confluence_api.DownloadIfChanged(AlwaysDownload, *api, page, remote_blogpost_title_cache, local_markdown, storePath); err != nil {
+		if err := confluence_api.DownloadIfChanged(AlwaysDownload, api, page, remote_title_cache, local_markdown, storePath); err != nil {
 			return fmt.Errorf("cmd: Confluence download failed: %w", err)
 		}
 	}
 
 	// TODO optionally --prune: Delete local markdown that don't exist on remote.
-
 	return nil
 }

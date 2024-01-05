@@ -10,20 +10,17 @@ import (
 )
 
 // XXX(pd) 20240104: Hmm, this is a deprecated API? (seen in VCR recording)
-func GetAllPagesInSpace(api conf.API, space data.ConfluenceSpace) ([]data.ConfluenceContent, error) {
-	// get content (just metadata) by space name
+func GetAllPagesByQuery(api conf.API, query conf.ContentQuery) ([]conf.Content, error) {
 	more := true
-	contents := []data.ConfluenceContent{}
+	contents := []conf.Content{}
 	position := 0
+	query_dup := query
 
 	for more {
-		res, err := api.GetContent(conf.ContentQuery{
-			SpaceKey: space.Space.Key,
-			Start:    position,
-			Expand:   []string{"version"},
-		})
+		query_dup.Start = position
+		res, err := api.GetContent(query_dup)
 		if err != nil {
-			return []data.ConfluenceContent{}, fmt.Errorf("confluence_api: couldn't retrieve list of contents: %w", err)
+			return []conf.Content{}, fmt.Errorf("confluence_api: couldn't retrieve list of contents: %w", err)
 		}
 
 		position += res.Size
@@ -31,55 +28,38 @@ func GetAllPagesInSpace(api conf.API, space data.ConfluenceSpace) ([]data.Conflu
 
 		if more {
 			for _, res := range res.Results {
-				contents = append(contents, data.ConfluenceContent{
-					Space:   space,
-					Content: res,
-				})
+				contents = append(contents, res)
 			}
-			fmt.Fprintf(os.Stderr, "Found %d items in %s...\n", position, space.Space.Key)
+			fmt.Fprintf(os.Stderr, "Fetched %d items...\n", position)
 		}
 	}
 
 	return contents, nil
 }
 
-func GetAllBlogPosts(api conf.API) ([]data.ConfluenceContent, error) {
-	// get content (just metadata) for all blog posts
-	more := true
+func GetAllPagesInSpace(api conf.API, space data.ConfluenceSpace) ([]data.ConfluenceContent, error) {
+	// get content (just metadata) by space name
 	contents := []data.ConfluenceContent{}
-	position := 0
 
-	// phantom "space" for storing blogposts:
-	var blogSpace = data.ConfluenceSpace{
-		Space: conf.Space{
-			Key:  "blogposts",
-			Name: "Placeholder for blogposts",
-		},
-		Org: "fake",
+	query := conf.ContentQuery{Expand: []string{"version"}}
+	if space.Space.Key == "blogposts" {
+		// whoops, blogposts are special, they're not in a "space"
+		query.Type = "blogpost"
+	} else {
+		// just a boring Confluence space
+		query.SpaceKey = space.Space.Key
 	}
 
-	for more {
-		res, err := api.GetContent(conf.ContentQuery{
-			Type:   "blogpost",
-			Start:  position,
-			Expand: []string{"version"}, // author is ill-defined... use last-edited version info??
+	results, err := GetAllPagesByQuery(api, query)
+	if err != nil {
+		return []data.ConfluenceContent{}, fmt.Errorf("confluence_api: Failed to retrieve space '%s' contents: %w", space.Space.Key, err)
+	}
+
+	for _, res := range results {
+		contents = append(contents, data.ConfluenceContent{
+			Content: res,
+			Space:   space,
 		})
-		if err != nil {
-			return []data.ConfluenceContent{}, fmt.Errorf("confluence_api: couldn't retrieve list of blogposts: %w", err)
-		}
-
-		position += res.Size
-		more = res.Size > 0
-
-		if more {
-			for _, res := range res.Results {
-				contents = append(contents, data.ConfluenceContent{
-					Space:   blogSpace,
-					Content: res,
-				})
-			}
-			fmt.Fprintf(os.Stderr, "Found %d items in blogposts...\n", position)
-		}
 	}
 
 	return contents, nil
