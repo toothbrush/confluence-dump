@@ -1,7 +1,7 @@
 ---
 # Always redownload / rewrite files to filesystem, even if they look up-to-date.  Useful if you're
 # monkeying with the Markdown output format.
-always-download: true
+# always-download: true
 
 # VCR replays API requests.  If you enable it, the first request will hit the API server, subsequent
 # requests will be served lightning-fast from your local.  Don't commit the VCR file though, it
@@ -9,11 +9,31 @@ always-download: true
 #
 # Note that if you have done something wrong, you might have a cached response that you don't want.
 # Just trash the fixtures/ folder and try again.
-with-vcr: true
+# with-vcr: true
+
+# Grab all available spaces, rather than relying on the list in `spaces`
+all-spaces: true
+
+# Delete Markdown files in the local dump that we don't recognise.  You'll almost always want this,
+# so that moved files don't cause duplicated IDs, which is a mess.  Will only touch spaces you've
+# asked to sync.
+prune: true
+
+# If you don't want to hammer the file system, this gives you a "dry run" where it performs all
+# steps except the final "write markdown to disk" step.
+write-markdown: true
+
+spaces:
+  - DRE
+  - CORE
 
 # Blog posts are considered by Confluence as separate from spaces, so we deal with them on their
 # own.  Flick this switch to get/not get blog posts downloaded.
 include-blogposts: true
+
+# Whether to download archived content, or only current content.  (Currently we don't support
+# downloading deleted or trashed content, but that wouldn't be too hard.. famous last words..)
+include-archived: false
 
 auth-username: paul.david@redbubble.com
 auth-token-cmd:

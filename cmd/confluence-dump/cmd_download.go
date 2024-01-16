@@ -4,22 +4,22 @@ Copyright © 2024 paul <paul@denknerd.org>
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 	"strings"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
-	"github.com/toothbrush/confluence-dump/confluenceapi"
-	"github.com/toothbrush/confluence-dump/data"
+	"github.com/toothbrush/confluence-dump/confluence"
 	"github.com/toothbrush/confluence-dump/localdump"
 	"gopkg.in/dnaeon/go-vcr.v3/cassette"
 	"gopkg.in/dnaeon/go-vcr.v3/recorder"
-
-	conf "github.com/virtomize/confluence-go-api"
 )
 
 // downloadCmd represents the download command
@@ -28,8 +28,8 @@ var downloadCmd = &cobra.Command{
 	Short: "Scrape Confluence space and download pages",
 	Long:  `TODO`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		debugLog("  AlwaysDownload: %v\n", AlwaysDownload)
-		return runDownload()
+		ctx := cmd.Context()
+		return runDownload(ctx)
 	},
 }
 
@@ -37,6 +37,12 @@ var (
 	AlwaysDownload   bool
 	WithVCR          bool
 	IncludeBlogposts bool
+	AllSpaces        bool
+	WriteMarkdown    bool
+	Prune            bool
+	IncludeArchived  bool
+
+	Spaces []string
 )
 
 func init() {
@@ -47,40 +53,49 @@ func init() {
 	downloadCmd.Flags().BoolVarP(&AlwaysDownload, "always-download", "f", false, "always download pages, skipping version check")
 	downloadCmd.Flags().BoolVar(&WithVCR, "with-vcr", false, "use go-vcr to cache responses")
 	downloadCmd.Flags().BoolVar(&IncludeBlogposts, "include-blogposts", false, "download blogposts as well as usual posts")
+	downloadCmd.Flags().BoolVar(&AllSpaces, "all-spaces", false, "download from all spaces")
+	downloadCmd.Flags().BoolVar(&WriteMarkdown, "write-markdown", true, "write Markdown files to disk")
+	downloadCmd.Flags().BoolVar(&Prune, "prune", true, "prune local Markdown files after download")
+	downloadCmd.Flags().BoolVar(&IncludeArchived, "include-archived", false, "include archived content")
+
+	downloadCmd.PersistentFlags().StringSliceVar(&Spaces, "spaces", []string{}, "list of spaces to scrape")
 }
 
-func runDownload() error {
+func runDownload(ctx context.Context) error {
+	log := log.New(os.Stderr, "[confluence-dump] ", 0)
+
 	if LocalStore == "" {
-		return fmt.Errorf("cmd: No location for local Confluence store.  Use --store or set it in your config file")
+		return fmt.Errorf("download: no location for local store.  Use --store or set it in your config file")
 	}
 
 	storePath, err := homedir.Expand(LocalStore)
 	if err != nil {
-		return fmt.Errorf("cmd: Couldn't expand homedir: %w", err)
+		return fmt.Errorf("download: couldn't expand homedir: %w", err)
 	}
 
 	if _, err := os.Stat(storePath); err != nil {
-		return fmt.Errorf("cmd: Couldn't stat storePath %s: %w", storePath, err)
+		log.Printf("Couldn't read %s, have you created the directory?\n", LocalStore)
+		return fmt.Errorf("download: couldn't stat storePath %s: %w", storePath, err)
 	}
 
 	storePathWithOrg := path.Join(storePath, ConfluenceInstance)
-	if err := os.MkdirAll(storePathWithOrg, 0755); err != nil {
-		return fmt.Errorf("localdump: Couldn't create directory %s: %w", storePathWithOrg, err)
+	if err := os.MkdirAll(storePathWithOrg, 0750); err != nil {
+		return fmt.Errorf("localdump: couldn't create directory %s: %w", storePathWithOrg, err)
 	}
 
 	tokenCmdOutput, err := exec.Command(AuthTokenCmd[0], AuthTokenCmd[1:]...).Output()
 	if err != nil {
-		return fmt.Errorf("cmd: Couldn't execute auth-token-cmd '%v': %w", AuthTokenCmd, err)
+		return fmt.Errorf("download: couldn't execute auth-token-cmd '%v': %w", AuthTokenCmd, err)
 	}
 
 	token := strings.Split(string(tokenCmdOutput), "\n")[0]
 
-	api, err := confluenceapi.GetConfluenceAPI(
+	api, err := confluence.NewAPI(
 		ConfluenceInstance,
 		AuthUsername,
 		token)
 	if err != nil {
-		return fmt.Errorf("cmd: Confluence API creation failed: %w", err)
+		return fmt.Errorf("download: couldn't instantiate Confluence API: %w", err)
 	}
 
 	if WithVCR {
@@ -93,7 +108,7 @@ func runDownload() error {
 		}
 		r, err := recorder.NewWithOptions(opts)
 		if err != nil {
-			return fmt.Errorf("cmd: Couldn't set up go-vcr recording: %w", err)
+			return fmt.Errorf("download: couldn't set up go-vcr recording: %w", err)
 		}
 
 		defer r.Stop() // Make sure recorder is stopped once done with it
@@ -110,77 +125,77 @@ func runDownload() error {
 		api.Client = vcrClient
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	// get current user information
-	currentUser, err := api.CurrentUser()
+	currentUser, err := api.CurrentUser(ctx)
 	if err != nil {
-		return fmt.Errorf("cmd: Couldn't query current user: %w", err)
+		return fmt.Errorf("download: couldn't query current user: %w", err)
 	}
 
-	fmt.Printf("Logged in to id.atlassian.com as '%s (%s)'...\n", currentUser.DisplayName, currentUser.AccountID)
+	log.Printf("Logged in to id.atlassian.com as '%s (%s)'...\n", currentUser.DisplayName, currentUser.Email)
 
-	// list all spaces
-	spaces, err := confluenceapi.ListAllSpaces(*api, ConfluenceInstance)
+	// list all spaces:
+	log.Println("Listing Confluence spaces...")
+	spacesRemote, err := api.ListAllSpaces(ctx, ConfluenceInstance)
 	if err != nil {
-		return fmt.Errorf("cmd: Couldn't list Confluence spaces: %w", err)
+		return fmt.Errorf("download: couldn't list Confluence spaces: %w", err)
 	}
+	log.Printf("Found %d spaces on '%s'.\n", len(spacesRemote), ConfluenceInstance)
 
-	for _, space := range spaces {
-		debugLog("  - %s: %s\n", space.Space.Key, space.Space.Name)
-	}
-
-	// grab a list of pages from given space
-	spaceToExport := "CORE"
-	spaceObj, ok := spaces[spaceToExport]
-	if !ok {
-		return fmt.Errorf("cmd: Couldn't find space %s", spaceToExport)
-	}
-
-	if err := GrabPostsInSpace(*api, spaceObj, storePath); err != nil {
-		return fmt.Errorf("cmd: Couldn't get pages in space %s: %w", spaceToExport, err)
+	spacesToDownload := []confluence.Space{}
+	if AllSpaces {
+		for _, sp := range spacesRemote {
+			spacesToDownload = append(spacesToDownload, sp)
+		}
+	} else {
+		for _, requestedSpace := range Spaces {
+			sp, ok := spacesRemote[requestedSpace]
+			if !ok {
+				return fmt.Errorf("download: requested space %s does not exist", requestedSpace)
+			}
+			spacesToDownload = append(spacesToDownload, sp)
+		}
 	}
 
 	if IncludeBlogposts {
-		// phantom "space" for storing blogposts:
-		var blogSpace = data.ConfluenceSpace{
-			Space: conf.Space{
+		// Add phantom "space" for storing blogposts:
+		spacesToDownload = append(spacesToDownload,
+			confluence.Space{
+				ID:   "blogposts",
 				Key:  "blogposts",
-				Name: "Placeholder for blogposts",
+				Name: "Users' blogposts",
+				Org:  ConfluenceInstance,
 			},
-			Org: ConfluenceInstance,
-		}
-
-		if err := GrabPostsInSpace(*api, blogSpace, storePath); err != nil {
-			return fmt.Errorf("cmd: Couldn't get pages in space %s: %w", spaceToExport, err)
-		}
+		)
 	}
 
-	return nil
-}
-
-func GrabPostsInSpace(api conf.API, spaceObj data.ConfluenceSpace, storePath string) error {
-	localMarkdown, err := localdump.LoadLocalMarkdown(storePath, spaceObj)
-	if err != nil {
-		return fmt.Errorf("cmd: Couldn't load local Markdown database: %w", err)
+	log.Println("Enqueuing for download:")
+	for _, space := range spacesToDownload {
+		log.Printf("  - %s: %s\n", space.Key, space.Name)
 	}
 
-	pages, err := confluenceapi.GetAllPagesInSpace(api, spaceObj)
-	if err != nil {
-		return fmt.Errorf("cmd: Get all pages in '%s' failed: %w", spaceObj.Space.Key, err)
+	if AllSpaces && len(Spaces) > 0 {
+		log.Println("🚨 WARNING: Both --all-spaces && --spaces set, ignoring --spaces.")
 	}
 
-	// build up id to title mapping, so that we can use it to determine the markdown output dir/filename.
-	remoteContentCache, err := data.BuildCacheFromPagelist(pages)
-	if err != nil {
-		return fmt.Errorf("cmd: Building remote content cache failed: %w", err)
-	}
-	debugLog("Found %d remote pages for '%s'...\n", len(remoteContentCache), spaceObj.Space.Key)
-
-	for _, page := range pages {
-		if err := confluenceapi.DownloadIfChanged(AlwaysDownload, api, page, remoteContentCache, localMarkdown, storePath); err != nil {
-			return fmt.Errorf("cmd: Confluence download failed: %w", err)
-		}
+	downloader := localdump.SpacesDownloader{
+		StorePath:       storePath,
+		Workers:         runtime.NumCPU(),
+		Logger:          log,
+		AlwaysDownload:  AlwaysDownload,
+		API:             api,
+		WriteMarkdown:   WriteMarkdown,
+		Prune:           Prune,
+		IncludeArchived: IncludeArchived,
 	}
 
-	// TODO optionally --prune: Delete local markdown that don't exist on remote.
+	if err := downloader.DownloadConfluenceSpaces(ctx, spacesToDownload); err != nil {
+		return fmt.Errorf("download: Couldn't download spaces: %w", err)
+	}
+
+	log.Println("Finished!")
+
 	return nil
 }

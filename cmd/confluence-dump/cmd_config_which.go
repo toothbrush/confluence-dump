@@ -17,7 +17,7 @@ var whichCmd = &cobra.Command{
 Output the filename that's being used to store your config.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Config path: %s\n", ConfigActual)
+		fmt.Printf("Config path: %s\n", Config)
 	},
 }
 

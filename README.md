@@ -13,19 +13,25 @@ It has many rough edges still, but here's roughly how you can use it:
 1. Create a rudimentary config file at `~/.config/confluence-dump.yaml` (or elsewhere with the
    `--config` flag) and populate it.  For now the only documentation is the example config file in
    this repo.
-1. Run it! `./confluence-dump` 🎉
+1. Run it! `./confluence-dump download` 🎉
 
 ## TODO
 
-* Parallelise downloading among a few workers
 * Set a base href for Markdown conversion so links work
-* Contexts on slow API calls
-* wrap API in a struct that has a logger and a context
-* remove all prints from anything not in `package main`
-* LocalMarkdownCache map should probably be a field in a in a struct, in preparation for parallel stuff
+* retry logic
+* post-cmd to ... do things (e.g. clean empty directories or touch `.projectile`)
+* deal with "personal spaces".. somehow
+* Option to skip archived/non-current content.
 
 ## DONE
 
 * Do not download pages we already have
 * Download all users' blog posts, optionally
 * Config/flags/env with Cobra
+* remove all prints from anything not in `package main`
+* wrap API in a struct that has a logger
+* Contexts on slow API calls
+* Parallelise downloading among a few workers
+* LocalMarkdownCache map is a field in a struct, in preparation for parallel stuff
+* prune
+* progress output

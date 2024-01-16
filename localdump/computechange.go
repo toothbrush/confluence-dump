@@ -2,29 +2,34 @@ package localdump
 
 import (
 	"fmt"
-
-	"github.com/toothbrush/confluence-dump/data"
+	"reflect"
 )
 
-func LocalPageIsStale(content data.ConfluenceContent, remoteCache data.RemoteContentCache, localFiles data.LocalMarkdownCache) (bool, error) {
-	id := data.ContentID(content.Content.ID)
-
-	if remote, ok := remoteCache[id]; ok {
-		if ourItem, ok := localFiles[id]; ok {
-			// ok, we _are_ aware of it.  how about the version?
-			if ourItem.Version == remote.Version {
-				// oh, we know about it, and it's the same version! nothing to do here.
-				return false, nil
-			} else {
-				// it's a different version.  redownload.
-				return true, nil
-			}
-		} else {
-			// we don't have the remote item at all -- add it to the download list
-			return true, nil
-		}
-	} else {
+// Returns the local item that matches the remote, or nil if our local copy is nonexistent or stale.
+func (downloader *SpacesDownloader) LocalVersionIsRecent(pageID ContentID) (LocalMarkdown, bool, error) {
+	remote, ok := downloader.remotePageMetadata[pageID]
+	if !ok {
 		// hmmm asking us about a thing we're not aware of!
-		return false, fmt.Errorf("localdump: Queried LocalPageIsStale for invalid remote ID %s", id)
+		return LocalMarkdown{}, false, fmt.Errorf("localdump: remote cache queried about unknown item ID: %s", pageID)
+	}
+
+	ourItem, ok := downloader.localMarkdownCache[pageID]
+	if !ok {
+		// we don't have the remote item at all -- add it to the download list
+		return LocalMarkdown{}, false, nil
+	}
+
+	remoteAncestry := remote.AncestorIDs
+	localAncestry := ourItem.AncestorIDs
+
+	// ok, we _are_ aware of it.  how about the version?
+	if remote.Page.Version != nil &&
+		remote.Page.Version.Number == ourItem.Version &&
+		reflect.DeepEqual(remoteAncestry, localAncestry) {
+		// oh, we know about it, and it's the same version & ancestry! nothing to do here.
+		return ourItem, true, nil
+	} else {
+		// something has changed.  redownload.
+		return LocalMarkdown{}, false, nil
 	}
 }

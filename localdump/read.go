@@ -8,69 +8,73 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
-	"github.com/toothbrush/confluence-dump/data"
 	"gopkg.in/yaml.v2"
 )
 
-func ParseExistingMarkdown(storePath string, relativePath string) (data.LocalMarkdown, error) {
+func ParseExistingMarkdown(storePath string, relativePath string) (LocalMarkdown, error) {
 	fullPath := path.Join(storePath, relativePath)
 	source, err := os.ReadFile(fullPath)
 	if err != nil {
-		return data.LocalMarkdown{}, fmt.Errorf("localdump: Couldn't read file %s: %w", fullPath, err)
+		return LocalMarkdown{}, fmt.Errorf("localdump: couldn't read file %s: %w", fullPath, err)
 	}
 
 	d := yaml.NewDecoder(bytes.NewReader(source))
-	var header data.MarkdownHeader
+	var header MarkdownHeader
 
 	// we expect the first "document" to be our header YAML.
 	if err := d.Decode(&header); err != nil {
-		return data.LocalMarkdown{}, fmt.Errorf("localdump: Couldn't parse header of file %s: %w", fullPath, err)
+		return LocalMarkdown{}, fmt.Errorf("localdump: couldn't parse header of file %s: %w", fullPath, err)
 	}
 	// check it was parsed
-	if !(header.ObjectID > 0 && header.Version > 0) {
-		return data.LocalMarkdown{}, fmt.Errorf("localdump: Header seems broken in %s", fullPath)
+	if header.ObjectID < 1 ||
+		header.Version < 1 {
+		return LocalMarkdown{}, fmt.Errorf("localdump: header seems broken in %s", fullPath)
 	}
 
-	return data.LocalMarkdown{
+	ancestorIDs := []ContentID{}
+	for _, id := range header.AncestorIDs {
+		ancestorIDs = append(ancestorIDs, ContentID(fmt.Sprintf("%d", id)))
+	}
+
+	return LocalMarkdown{
 		Content:      string(source),
-		ID:           data.ContentID(fmt.Sprintf("%d", header.ObjectID)),
-		RelativePath: data.RelativePath(relativePath),
+		ID:           ContentID(fmt.Sprintf("%d", header.ObjectID)),
+		RelativePath: RelativePath(relativePath),
 		Version:      header.Version,
+		AncestorIDs:  ancestorIDs,
 	}, nil
 }
 
-// let's scope the markdown-database-loader to a particular space, so that pruning .. makes more
-// sense.
-func LoadLocalMarkdown(storePath string, space data.ConfluenceSpace) (data.LocalMarkdownCache, error) {
-	pathForSpace := path.Join(storePath, space.Org, space.Space.Key)
+func (downloader *SpacesDownloader) LoadLocalMarkdown() error {
 	// find files
-	filenames, err := ListAllMarkdownFiles(pathForSpace)
+	filenames, err := ListAllMarkdownFiles(downloader.StorePath)
 	if err != nil {
-		return data.LocalMarkdownCache{}, fmt.Errorf("localdump: Error loading Markdown files: %w", err)
+		return fmt.Errorf("localdump: error loading Markdown files: %w", err)
 	}
 
-	localMarkdownCache := data.LocalMarkdownCache{}
+	downloader.localMarkdownCache = make(map[ContentID]LocalMarkdown)
 	// parse each file
 	for _, file := range filenames {
-		rel, err := filepath.Rel(storePath, file)
+		rel, err := filepath.Rel(downloader.StorePath, file)
 		if err != nil {
-			return data.LocalMarkdownCache{}, fmt.Errorf("localdump: Couldn't compute relative path of %s: %w", file, err)
+			return fmt.Errorf("localdump: couldn't compute relative path of %s: %w", file, err)
 		}
 
-		md, err := ParseExistingMarkdown(storePath, rel)
+		md, err := ParseExistingMarkdown(downloader.StorePath, rel)
 		if err != nil {
-			return data.LocalMarkdownCache{}, fmt.Errorf("localdump: Couldn't load local Markdown file %s: %w", file, err)
+			return fmt.Errorf("localdump: couldn't load local Markdown file %s: %w", file, err)
 		}
 
-		if _, ok := localMarkdownCache[md.ID]; ok {
+		if _, ok := downloader.localMarkdownCache[md.ID]; ok {
 			// oh damn, we have two or more files in the local repo that present the same ID!  warn the user.
-			fmt.Fprintf(os.Stderr, "🚨 WARNING: Found duplicate id %s in file %s!  Undefined behaviour will result.\n", md.ID, md.RelativePath)
+			return fmt.Errorf("localdump: found duplicate id %s in file %s, please clean up", md.ID, md.RelativePath)
 		}
-		localMarkdownCache[md.ID] = md
+		downloader.localMarkdownCache[md.ID] = md
 	}
 
-	return localMarkdownCache, nil
+	return nil
 }
 
 // returns absolute pathnames
@@ -82,7 +86,7 @@ func ListAllMarkdownFiles(inFolder string) ([]string, error) {
 		return nil, nil
 	} else {
 		// some other error
-		return nil, fmt.Errorf("localdump: Error opening %s for file tree walk: %w", inFolder, err)
+		return nil, fmt.Errorf("localdump: error opening %s for file tree walk: %w", inFolder, err)
 	}
 
 	filenames := []string{}
@@ -90,7 +94,7 @@ func ListAllMarkdownFiles(inFolder string) ([]string, error) {
 	err := filepath.Walk(inFolder,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
-				return fmt.Errorf("localdump: Error during file tree walk: %w", err)
+				return fmt.Errorf("localdump: error during file tree walk: %w", err)
 			}
 			if !info.IsDir() && strings.HasSuffix(path, ".md") {
 				filenames = append(filenames, path)
@@ -98,8 +102,20 @@ func ListAllMarkdownFiles(inFolder string) ([]string, error) {
 			return nil
 		})
 	if err != nil {
-		return nil, fmt.Errorf("localdump: Error initialising file tree walk: %w", err)
+		return nil, fmt.Errorf("localdump: error initialising file tree walk: %w", err)
 	}
 
 	return filenames, nil
+}
+
+type MarkdownHeader struct {
+	Title         string
+	Timestamp     time.Time
+	Version       int
+	ObjectID      int `yaml:"object_id"`
+	URI           string
+	Status        string
+	ObjectType    string   `yaml:"object_type"`
+	AncestorNames []string `yaml:"ancestor_names,flow"`
+	AncestorIDs   []int    `yaml:"ancestor_ids,flow"`
 }

@@ -21,9 +21,10 @@ Is something not working for you?  Have a look whether your config is as you exp
 		// visible.
 		fmt.Printf("Dump current config state:\n\n")
 
-		fmt.Printf("  Config: %s\n", Config)
-		fmt.Printf("  ConfigActual: %s\n", ConfigActual)
+		fmt.Printf("  Config file: %s\n", Config)
 		fmt.Printf("  Debug: %v\n", Debug)
+		fmt.Println()
+		fmt.Printf("  Parsed YAML:\n%#v\n", ParsedConfig)
 		fmt.Println()
 		fmt.Printf("  AuthUsername: %s\n", AuthUsername)
 		fmt.Printf("  AuthTokenCmd: %v\n", AuthTokenCmd)
