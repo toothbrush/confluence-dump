@@ -44,6 +44,10 @@ more, this tool will scrape all of a given Confluence space to a set of local Ma
 		if err := initializeConfig(cmd); err != nil {
 			return fmt.Errorf("confluence-dump: failed to initialise config: %w", err)
 		}
+
+		if len(AuthTokenCmd) < 1 {
+			return fmt.Errorf("confluence-dump: please provide --auth-token-cmd")
+		}
 		return nil
 	},
 }
@@ -115,9 +119,11 @@ func bindFlags(cmd *cobra.Command, v YamlConfig) error {
 		if key == "" {
 			return fmt.Errorf("confluence-dump: could not retrieve struct tag 'yaml'")
 		}
-		flag := cmd.Flag(key)
-		if flag == nil {
-			return fmt.Errorf("confluence-dump: unknown flag '%s'", key)
+		if flag := cmd.Flag(key); flag == nil {
+			// hmm... the flag is unknown.  but that can legitimately happen if you're running
+			// e.g. `list spaces` which has no `include-archived` flag but your YAML file does
+			// define that flag...
+			continue
 		}
 		if !cmd.Flags().Changed(key) {
 			switch field.Kind() {
