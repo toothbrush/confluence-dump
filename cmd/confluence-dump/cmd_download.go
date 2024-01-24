@@ -28,6 +28,7 @@ var downloadCmd = &cobra.Command{
 	Use:   "download",
 	Short: "Scrape Confluence space and download pages",
 	Long:  `TODO`,
+	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		return runDownload(ctx)
