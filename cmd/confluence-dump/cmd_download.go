@@ -23,11 +23,37 @@ import (
 	"gopkg.in/dnaeon/go-vcr.v3/recorder"
 )
 
-// downloadCmd represents the download command
+var downloadUsage = strings.TrimSpace(`
+Download Confluence posts
+-------------------------
+
+This command downloads the specified Confluence wiki spaces.  Probably, you'll want to configure
+--spaces to only grab the spaces you want, but you may be greedy and choose --all-spaces.  If you
+want inspiration, see 'confluence-dump list spaces'.
+
+Typically, the download command will go through a few phases:
+
+1. Ensure that the spaces you specified are valid and accessible.
+2. Download a list of all posts and their version metadata, in the given spaces (this can take a
+while).
+3. Compare each page to whatever you have cached in your local Markdown store, and if that's stale,
+download (of course, if this is the first time you're running confluence-dump, everything will
+get downloaded).
+4. Once the download is complete, all Markdown files in your local store that we _haven't_
+downloaded or skipped will be assumed stale (e.g., they got moved, or are now deleted).  These files
+will be deleted.  This only happens for spaces we scraped, so if your store has space A & B but this
+time your ran with --spaces=A, we won't touch B's files at all.
+
+Example invocation:
+
+$ confluence-dump --spaces=CORE,DRE
+$ confluence-dump --all-spaces # Disregards your configured list of spaces
+`)
+
 var downloadCmd = &cobra.Command{
 	Use:   "download",
 	Short: "Download pages from Confluence space(s)",
-	Long:  `TODO`,
+	Long:  downloadUsage,
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()

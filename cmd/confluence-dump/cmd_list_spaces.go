@@ -15,12 +15,15 @@ import (
 	"github.com/toothbrush/confluence-dump/confluence"
 )
 
+var listSpacesUsage = strings.TrimSpace(`
+If you want to find out what spaces your Confluence wiki has, use this command.
+`)
+
 var listSpacesCmd = &cobra.Command{
 	Use:   "spaces",
-	Short: "Output list of spaces",
-	Long: `
-If you want to find out what spaces your Confluence wiki has, use this command.
-`,
+	Short: "Print list of spaces",
+	Long:  listSpacesUsage,
+	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := context.WithCancel(cmd.Context())
 		defer cancel()

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 
 	"github.com/fatih/structs"
 	"github.com/mitchellh/go-homedir"
@@ -31,14 +32,18 @@ var (
 	ParsedConfig YamlConfig
 )
 
+var rootUsage = strings.TrimSpace(`
+# confluence-dump
+
+Have you ever wanted to use local tools, like fuzzy-search, on a Confluence web workspace?  Wish no
+more, this tool will scrape all of a given Confluence space to a set of local Markdown files.
+`)
+
 // Build the cobra command that handles our command line tool.
 var rootCmd = &cobra.Command{
 	Use:   "confluence-dump",
 	Short: "Download the entirety of a Confluence workspace",
-	Long: `
-Have you ever wanted to use local tools, like fuzzy-search, on a Confluence web workspace?  Wish no
-more, this tool will scrape all of a given Confluence space to a set of local Markdown files.
-`,
+	Long:  rootUsage,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// You can bind cobra and viper in a few locations, but PersistentPreRunE on the root command works well
 		if err := initializeConfig(cmd); err != nil {

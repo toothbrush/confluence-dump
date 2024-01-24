@@ -5,17 +5,21 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
+
+var configShowUsage = strings.TrimSpace(`
+Is something not working for you?  Have a look whether your config is as you expect.
+`)
 
 // showCmd represents the show command
 var showCmd = &cobra.Command{
 	Use:   "show",
 	Short: "Output current config",
-	Long: `
-Is something not working for you?  Have a look whether your config is as you expect.
-`,
+	Long:  configShowUsage,
+	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		// Note, you can only talk about persistent flags here.  Command-specific ones won't be
 		// visible.
