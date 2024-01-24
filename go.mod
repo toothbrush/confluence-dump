@@ -4,6 +4,7 @@ go 1.21.5
 
 require (
 	github.com/JohannesKaufmann/html-to-markdown v1.5.0
+	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/fatih/structs v1.1.0
 	github.com/google/go-querystring v1.1.0
 	github.com/mitchellh/go-homedir v1.1.0
@@ -17,7 +18,6 @@ require (
 )
 
 require (
-	github.com/PuerkitoBio/goquery v1.8.1 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
 	github.com/andybalholm/cascadia v1.3.1 // indirect
