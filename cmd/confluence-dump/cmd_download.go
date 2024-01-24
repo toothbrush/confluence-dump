@@ -13,6 +13,7 @@ import (
 	"path"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -89,6 +90,8 @@ func init() {
 }
 
 func runDownload(ctx context.Context) error {
+	start := time.Now()
+
 	log := log.New(os.Stderr, "[confluence-dump] ", 0)
 
 	if LocalStore == "" {
@@ -229,7 +232,8 @@ func runDownload(ctx context.Context) error {
 		return fmt.Errorf("download: Couldn't download spaces: %w", err)
 	}
 
-	log.Println("Finished!")
+	duration := time.Since(start)
+	log.Printf("Finished in %s!\n", duration)
 
 	return nil
 }
