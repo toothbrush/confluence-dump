@@ -18,7 +18,6 @@ It has many rough edges still, but here's roughly how you can use it:
 ## TODO
 
 * Set a base href for Markdown conversion so links work
-* deal with "personal spaces".. somehow
 
 ## DONE
 
@@ -37,3 +36,4 @@ It has many rough edges still, but here's roughly how you can use it:
 * post-cmd to ... do things (e.g. clean empty directories or touch `.projectile`)
 * You can put the config file anywhere and set `CONFLUENCE_DUMP_CONFIG` to point there
 * hmmmmmmm does renaming a file's ancestor get reflected??
+* deal with "personal spaces".. somehow
