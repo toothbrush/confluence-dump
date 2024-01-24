@@ -73,9 +73,16 @@ func runDownload(ctx context.Context) error {
 		return fmt.Errorf("download: couldn't expand homedir: %w", err)
 	}
 
-	if _, err := os.Stat(storePath); err != nil {
-		log.Printf("Couldn't read %s, have you created the directory?\n", LocalStore)
-		return fmt.Errorf("download: couldn't stat storePath %s: %w", storePath, err)
+	storePathInfo, err := os.Stat(storePath)
+	if os.IsNotExist(err) {
+		if err := os.Mkdir(storePath, os.FileMode(0755)); err != nil {
+			return fmt.Errorf("download: failed to create directory %s: %w", storePath, err)
+		}
+	} else if err != nil {
+		// this means there's an error, and it's not the one kind we know how to recover from
+		return fmt.Errorf("download: failed to stat directory %s: %w", storePath, err)
+	} else if !storePathInfo.IsDir() {
+		return fmt.Errorf("download: storePath `%s` is not a directory", storePath)
 	}
 
 	storePathWithOrg := path.Join(storePath, ConfluenceInstance)
