@@ -1,59 +1,102 @@
 ---
+# This config file serves as the "documentation" for confluence-dump.  I promise i'll talk about all
+# the tweakables here.  By default the tool will expect this file in ~/.config/confluence-dump.yaml,
+# but you can specify where to find it with the CONFLUENCE_DUMP_CONFIG environment variable, or with
+# the --config flag when executing confluence-dump.
+
+## Settings
+#
 # Always redownload / rewrite files to filesystem, even if they look up-to-date.  Useful if you're
 # monkeying with the Markdown output format.
+#
+# (default: false)
 # always-download: true
 
 # VCR replays API requests.  If you enable it, the first request will hit the API server, subsequent
-# requests will be served lightning-fast from your local.  Don't commit the VCR file though, it
-# probably contains all your company's secrets.
+# requests will be served lightning-fast from your local.  Definitely *do not* commit the VCR file,
+# it probably contains all your company's secrets.
 #
-# Note that if you have done something wrong, you might have a cached response that you don't want.
-# Just trash the fixtures/ folder and try again.
+# Note that if something went wrong, you might have a cached response in the "cassettes" that you
+# don't want.  Just trash the fixtures/ folder and try again.
+#
+# (default: false)
 # with-vcr: true
 
-# Grab all available spaces, rather than relying on the list in `spaces`
+# Grab all available spaces, rather than relying on the list in `spaces`.  This option will take
+# precedence over anything configured in `spaces`.  It can cause a large amount of downloading to
+# happen.
+#
+# (default: false)
 # all-spaces: true
 
-# Delete Markdown files in the local dump that we don't recognise.  You'll almost always want this,
-# so that moved files don't cause duplicated IDs, which is a mess.  Will only touch spaces you've
-# asked to sync.
-prune: true
+# Delete Markdown files in the local dump that we don't recognise or that have been renamed/moved on
+# Confluence.  You'll almost always want this, so that moved files don't cause duplicated IDs, which
+# is a mess.  We'll only ever touch spaces you've asked to sync, so you can reasonably update a
+# single space on command with pruning enabled.
+#
+# (default: true)
+# prune: true
 
 # If you don't want to hammer the file system, this gives you a "dry run" where it performs all
 # steps except the final "write markdown to disk" step.
-write-markdown: true
+#
+# (default: true)
+# write-markdown: true
 
+# Provide a list of keys of spaces to synchronise from your Confluence wiki.  By default, none will
+# be synchronised, so you probably do want to set this to youre favourite spaces.  You can find
+# spaces' keys with the `confluence-dump list spaces` command.
+#
+# (default: [])
 spaces:
   - CORE
   - DRE
   - ENG2
 
-# Blog posts are considered by Confluence as separate from spaces, so we deal with them on their
-# own.  Flick this switch to get/not get blog posts downloaded.
+# Confluence treats blog posts and pages separately.  We usually only grab pages, but if you also
+# want blog posts, this is for you.  Flick this switch to get/not get blog posts downloaded.
+#
+# (default: false)
 include-blogposts: true
 
-# Whether to download archived content, or only current content.  (Currently we don't support
+# Toggle whether to download archived content, or only current content.  (Currently we don't support
 # downloading deleted or trashed content, but that wouldn't be too hard.. famous last words..)
+#
+# (default: false)
 include-archived: false
 
+# Configure your API connection to Confluence.  You'll need to get hold of an API token at
+# https://id.atlassian.com/manage-profile/security/api-tokens, then store it safely.  Then, provide
+# your Atlassian username in `auth-username`, and provide a command to run to retrieve your API
+# token in `auth-token-cmd`.  I use the https://www.passwordstore.org/ tool to do that.
+#
+# auth-token-cmd is a list with the binary to execute as its first element, and all arguments as
+# separate list items after that.
 auth-username: paul.david@redbubble.com
 auth-token-cmd:
   - pass
   - confluence-api-token/paul.david@redbubble.com
 
-# Where to put downloaded Markdown.  Folders and files will be created like
-# ~/confluence/ORG/SPACE/page/ancestor/123-title.md
+# Where to keep your downloaded Markdown version of Confluence wiki.  Folders and files will be
+# created like ~/confluence/ORG/SPACE/page/ancestor/123-title.md
+#
+# (required; no default)
 store: ~/confluence
 
 # The name of your Confluence instance.  You can find this in the URL of your Confluence pages, as
 # the subdomain to atlassian.net.
 #
 # Maybe one day this will be a list.
+#
+# (required; no default)
 confluence-instance: redbubble
 
 # post-download-cmd will run a command after a successful download action.  This might be useful to
 # fulltext-index your local Confluence dump, or .. whatever!  PWD for the command will be your
-# `store` path configured above.
+# `store` path configured above, so commands will be run as if they're invoked from within your
+# Confluence Markdown storage location.
+#
+# (default: []; no command will be run)
 post-download-cmd:
   - touch
   - .projectile
