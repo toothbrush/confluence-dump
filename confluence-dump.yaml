@@ -24,8 +24,9 @@ prune: true
 write-markdown: true
 
 spaces:
-  - DRE
   - CORE
+  - DRE
+  - ENG2
 
 # Blog posts are considered by Confluence as separate from spaces, so we deal with them on their
 # own.  Flick this switch to get/not get blog posts downloaded.
