@@ -82,7 +82,7 @@ func runDownload(ctx context.Context) error {
 		// this means there's an error, and it's not the one kind we know how to recover from
 		return fmt.Errorf("download: failed to stat directory %s: %w", storePath, err)
 	} else if !storePathInfo.IsDir() {
-		return fmt.Errorf("download: storePath `%s` is not a directory: %w", storePath, err)
+		return fmt.Errorf("download: storePath `%s` is not a directory", storePath)
 	}
 
 	storePathWithOrg := path.Join(storePath, ConfluenceInstance)
