@@ -27,18 +27,23 @@ func canonicalise(title string) (string, error) {
 }
 
 func (downloader *SpacesDownloader) BuildCacheFromPagelist() error {
-	for _, item := range downloader.remotePageMetadata {
+	for id, item := range downloader.remotePageMetadata {
 		ancestors, err := downloader.determineAncestors(item.Page)
 		if err != nil {
 			return fmt.Errorf("localdump: couldn't determine ancestry for %s: %w", item.Page.ID, err)
 		}
-		item.AncestorIDs = ancestors
 
-		slug, err := canonicalise(item.Page.Title)
-		if err != nil {
-			return fmt.Errorf("localdump: couldn't derive slug: %w", err)
+		if entry, ok := downloader.remotePageMetadata[id]; ok {
+			slug, err := canonicalise(item.Page.Title)
+			if err != nil {
+				return fmt.Errorf("localdump: couldn't derive slug: %w", err)
+			}
+			entry.AncestorIDs = ancestors
+			entry.Slug = slug
+			downloader.remotePageMetadata[id] = entry
+		} else {
+			return fmt.Errorf("localdump: expected key %s missing from remotePageMetadata", id)
 		}
-		item.Slug = slug
 	}
 
 	return nil
