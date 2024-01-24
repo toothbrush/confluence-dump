@@ -50,3 +50,10 @@ store: ~/confluence
 #
 # Maybe one day this will be a list.
 confluence-instance: redbubble
+
+# post-download-cmd will run a command after a successful download action.  This might be useful to
+# fulltext-index your local Confluence dump, or .. whatever!  PWD for the command will be your
+# `store` path configured above.
+post-download-cmd:
+  - touch
+  - .projectile
