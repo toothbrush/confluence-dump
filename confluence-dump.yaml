@@ -12,7 +12,7 @@
 # with-vcr: true
 
 # Grab all available spaces, rather than relying on the list in `spaces`
-all-spaces: true
+# all-spaces: true
 
 # Delete Markdown files in the local dump that we don't recognise.  You'll almost always want this,
 # so that moved files don't cause duplicated IDs, which is a mess.  Will only touch spaces you've
