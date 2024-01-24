@@ -106,11 +106,11 @@ func init() {
 	// when this action is called directly.
 	downloadCmd.Flags().BoolVarP(&AlwaysDownload, "always-download", "f", false, "always download pages, skipping version check")
 	downloadCmd.Flags().BoolVar(&WithVCR, "with-vcr", false, "use go-vcr to cache responses")
-	downloadCmd.Flags().BoolVar(&IncludeBlogposts, "include-blogposts", false, "download blogposts as well as usual posts")
 	downloadCmd.Flags().BoolVar(&AllSpaces, "all-spaces", false, "download from all spaces")
 	downloadCmd.Flags().BoolVar(&WriteMarkdown, "write-markdown", true, "write Markdown files to disk")
 	downloadCmd.Flags().BoolVar(&Prune, "prune", true, "prune local Markdown files after download")
 	downloadCmd.Flags().BoolVar(&IncludeArchived, "include-archived", false, "include archived content")
+	downloadCmd.Flags().BoolVar(&IncludeBlogposts, "include-blogposts", false, "download blogposts as well as usual posts")
 
 	downloadCmd.PersistentFlags().StringSliceVar(&Spaces, "spaces", []string{}, "list of spaces to scrape")
 	downloadCmd.PersistentFlags().StringSliceVar(&PostDownloadCmd, "post-download-cmd", []string{}, "command to execute after download")
