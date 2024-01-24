@@ -31,6 +31,30 @@ var downloadCmd = &cobra.Command{
 		ctx := cmd.Context()
 		return runDownload(ctx)
 	},
+
+	PostRunE: func(cmd *cobra.Command, args []string) error {
+		if len(PostDownloadCmd) < 1 {
+			// no post-download command specified, probably.
+			return nil
+		}
+
+		postDownloadCmd := exec.Command(PostDownloadCmd[0], PostDownloadCmd[1:]...)
+		expandedDir, err := homedir.Expand(ParsedConfig.StorePath)
+		if err != nil {
+			return fmt.Errorf("download: couldn't expand homedir: %w", err)
+		}
+		postDownloadCmd.Dir = expandedDir
+		postDownloadCmdOutput, err := postDownloadCmd.CombinedOutput()
+
+		if output := strings.TrimSpace(string(postDownloadCmdOutput)); output != "" {
+			fmt.Printf("post-download-cmd output:\n%s\n", output)
+		}
+		if err != nil {
+			return fmt.Errorf("download: failed to execute post-download-cmd '%v': %w", PostDownloadCmd, err)
+		}
+
+		return nil
+	},
 }
 
 var (
@@ -43,6 +67,8 @@ var (
 	IncludeArchived  bool
 
 	Spaces []string
+
+	PostDownloadCmd []string
 )
 
 func init() {
@@ -59,6 +85,7 @@ func init() {
 	downloadCmd.Flags().BoolVar(&IncludeArchived, "include-archived", false, "include archived content")
 
 	downloadCmd.PersistentFlags().StringSliceVar(&Spaces, "spaces", []string{}, "list of spaces to scrape")
+	downloadCmd.PersistentFlags().StringSliceVar(&PostDownloadCmd, "post-download-cmd", []string{}, "command to execute after download")
 }
 
 func runDownload(ctx context.Context) error {

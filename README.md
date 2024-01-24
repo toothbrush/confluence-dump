@@ -18,7 +18,6 @@ It has many rough edges still, but here's roughly how you can use it:
 ## TODO
 
 * Set a base href for Markdown conversion so links work
-* post-cmd to ... do things (e.g. clean empty directories or touch `.projectile`)
 * deal with "personal spaces".. somehow
 
 ## DONE
@@ -35,3 +34,4 @@ It has many rough edges still, but here's roughly how you can use it:
 * progress output
 * Option to skip archived/non-current content.
 * retry logic
+* post-cmd to ... do things (e.g. clean empty directories or touch `.projectile`)

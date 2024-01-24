@@ -110,6 +110,8 @@ type YamlConfig struct {
 	AuthUsername       string   `yaml:"auth-username"`
 	AuthTokenCmd       []string `yaml:"auth-token-cmd"`
 	Spaces             []string `yaml:"spaces"`
+
+	PostDownloadCmd []string `yaml:"post-download-cmd"`
 }
 
 // Bind each cobra flag to its associated viper configuration (config file and environment variable)
