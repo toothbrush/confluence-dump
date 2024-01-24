@@ -2,7 +2,6 @@ package localdump
 
 import (
 	"fmt"
-	"reflect"
 )
 
 // Returns the local item that matches the remote, or nil if our local copy is nonexistent or stale.
@@ -25,11 +24,26 @@ func (downloader *SpacesDownloader) LocalVersionIsRecent(pageID ContentID) (Loca
 	// ok, we _are_ aware of it.  how about the version?
 	if remote.Page.Version != nil &&
 		remote.Page.Version.Number == ourItem.Version &&
-		reflect.DeepEqual(remoteAncestry, localAncestry) {
+		ancestryEqual(remoteAncestry, localAncestry) {
 		// oh, we know about it, and it's the same version & ancestry! nothing to do here.
 		return ourItem, true, nil
 	} else {
 		// something has changed.  redownload.
 		return LocalMarkdown{}, false, nil
 	}
+}
+
+func ancestryEqual(ancestry1 []ContentID, ancestry2 []ContentID) bool {
+	if len(ancestry1) != len(ancestry2) {
+		return false
+	}
+
+	// now we know their lengths are equal.
+	for i := range ancestry1 {
+		if ancestry1[i] != ancestry2[i] {
+			return false
+		}
+	}
+
+	return true
 }
