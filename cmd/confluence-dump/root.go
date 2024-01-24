@@ -54,7 +54,7 @@ more, this tool will scrape all of a given Confluence space to a set of local Ma
 
 func init() {
 	// Define cobra flags, the default value has the lowest (least significant) precedence
-	rootCmd.PersistentFlags().StringVar(&Config, "config", "", "config file location (default: ~/.config/confluence-dump.yaml)")
+	rootCmd.PersistentFlags().StringVar(&Config, "config", "", "config file location (default: ~/.config/confluence-dump.yaml, respects CONFLUENCE_DUMP_CONFIG)")
 	rootCmd.PersistentFlags().BoolVar(&Debug, "debug", false, "display debug output")
 	rootCmd.PersistentFlags().StringSliceVar(&AuthTokenCmd, "auth-token-cmd", []string{}, "shell command to retrieve Atlassian auth token")
 	rootCmd.PersistentFlags().StringVar(&LocalStore, "store", "", "location to save Confluence pages")
@@ -64,13 +64,20 @@ func init() {
 
 func initializeConfig(cmd *cobra.Command) error {
 	if Config == "" {
-		// Search config in home XDG-ish directory
-		config, err := homedir.Expand("~/.config/confluence-dump.yaml")
-		if err != nil {
-			return fmt.Errorf("confluence-dump: unable to expand homedir: %w", err)
+		// Did the user provide an ENV?
+		envConfig := os.Getenv("CONFLUENCE_DUMP_CONFIG")
+		if envConfig != "" {
+			Config = envConfig
+		} else {
+			// As fallback, search for config in home XDG-ish directory
+			Config = "~/.config/confluence-dump.yaml"
 		}
-		Config = config
 	}
+	config, err := homedir.Expand(Config)
+	if err != nil {
+		return fmt.Errorf("confluence-dump: unable to expand homedir: %w", err)
+	}
+	Config = config
 
 	// Use config file from the flag.
 	if _, err := os.Stat(Config); errors.Is(err, os.ErrNotExist) {
