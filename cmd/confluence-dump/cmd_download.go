@@ -75,7 +75,12 @@ func runDownload(ctx context.Context) error {
 
 	storePathInfo, err := os.Stat(storePath)
 	if os.IsNotExist(err) {
-		os.Mkdir(storePath, os.FileMode(0755))
+		if err := os.Mkdir(storePath, os.FileMode(0755)); err != nil {
+			return fmt.Errorf("download: failed to create directory %s: %w", storePath, err)
+		}
+	} else if err != nil {
+		// this means there's an error, and it's not the one kind we know how to recover from
+		return fmt.Errorf("download: failed to stat directory %s: %w", storePath, err)
 	} else if !storePathInfo.IsDir() {
 		return fmt.Errorf("download: storePath `%s` is not a directory: %w", storePath, err)
 	}
