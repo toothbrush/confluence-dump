@@ -116,41 +116,42 @@ func bindFlags(cmd *cobra.Command, v YamlConfig) error {
 			return fmt.Errorf("confluence-dump: could not retrieve struct tag 'yaml'")
 		}
 		flag := cmd.Flag(key)
-		if flag != nil {
-			if !cmd.Flags().Changed(key) {
-				switch field.Kind() {
-				case reflect.Ptr:
-					// err, this is crappy, but i know YamlConfig only uses pointers for bools.....
-					b, ok := field.Value().(*bool)
-					if !ok {
-						return fmt.Errorf("confluence-dump: found unrecognised field: %+v", field)
-					}
-					if b != nil {
-						cmd.Flags().Set(key, fmt.Sprintf("%v", *b))
-					}
-
-				case reflect.String:
-					s, ok := field.Value().(string)
-					if !ok {
-						return fmt.Errorf("confluence-dump: found unrecognised field: %+v", field)
-					}
-					if s != "" {
-						cmd.Flags().Set(key, s)
-					}
-
-				case reflect.Slice:
-					ss, ok := field.Value().([]string)
-					if !ok {
-						return fmt.Errorf("confluence-dump: found unrecognised field: %+v", field)
-					}
-					for _, s := range ss {
-						// yes, repeatedly calling Set() appends to the slice...
-						cmd.Flags().Set(key, s)
-					}
-
-				default:
+		if flag == nil {
+			return fmt.Errorf("confluence-dump: unknown flag '%s'", key)
+		}
+		if !cmd.Flags().Changed(key) {
+			switch field.Kind() {
+			case reflect.Ptr:
+				// err, this is crappy, but i know YamlConfig only uses pointers for bools.....
+				b, ok := field.Value().(*bool)
+				if !ok {
 					return fmt.Errorf("confluence-dump: found unrecognised field: %+v", field)
 				}
+				if b != nil {
+					cmd.Flags().Set(key, fmt.Sprintf("%v", *b))
+				}
+
+			case reflect.String:
+				s, ok := field.Value().(string)
+				if !ok {
+					return fmt.Errorf("confluence-dump: found unrecognised field: %+v", field)
+				}
+				if s != "" {
+					cmd.Flags().Set(key, s)
+				}
+
+			case reflect.Slice:
+				ss, ok := field.Value().([]string)
+				if !ok {
+					return fmt.Errorf("confluence-dump: found unrecognised field: %+v", field)
+				}
+				for _, s := range ss {
+					// yes, repeatedly calling Set() appends to the slice...
+					cmd.Flags().Set(key, s)
+				}
+
+			default:
+				return fmt.Errorf("confluence-dump: found unrecognised field: %+v", field)
 			}
 		}
 	}
