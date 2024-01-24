@@ -26,7 +26,7 @@ import (
 // downloadCmd represents the download command
 var downloadCmd = &cobra.Command{
 	Use:   "download",
-	Short: "Scrape Confluence space and download pages",
+	Short: "Download pages from Confluence space(s)",
 	Long:  `TODO`,
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
