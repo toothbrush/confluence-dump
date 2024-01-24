@@ -25,6 +25,7 @@ type SpacesDownloader struct {
 	WriteMarkdown   bool
 	Prune           bool
 	IncludeArchived bool
+	IncludePersonal bool
 
 	Logger   *log.Logger
 	loggerMu sync.Mutex

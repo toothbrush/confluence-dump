@@ -44,7 +44,7 @@ var listSpacesCmd = &cobra.Command{
 
 		// list all spaces:
 		log.Printf("Listing Confluence spaces in %s...\n", ConfluenceInstance)
-		spacesRemote, err := api.ListAllSpaces(ctx, ConfluenceInstance)
+		spacesRemote, err := api.ListAllSpaces(ctx, ConfluenceInstance, IncludePersonal)
 		if err != nil {
 			return fmt.Errorf("download: couldn't list Confluence spaces: %w", err)
 		}
@@ -79,4 +79,6 @@ var listSpacesCmd = &cobra.Command{
 
 func init() {
 	listCmd.AddCommand(listSpacesCmd)
+
+	listSpacesCmd.Flags().BoolVar(&IncludePersonal, "include-personal-spaces", false, "list individuals' personal spaces")
 }

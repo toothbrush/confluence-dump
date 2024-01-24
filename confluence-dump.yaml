@@ -47,6 +47,9 @@
 # be synchronised, so you probably do want to set this to youre favourite spaces.  You can find
 # spaces' keys with the `confluence-dump list spaces` command.
 #
+# If you want to reference a user's personal space here, you'll need to set
+# `include-personal-spaces`, too.
+#
 # (default: [])
 spaces:
   - CORE
@@ -64,6 +67,19 @@ include-blogposts: true
 #
 # (default: false)
 include-archived: false
+
+# If you'd like to include users' personal spaces in the candidates for download, flick this switch.
+# Typically this probably just creates noise (i.e., a very long list of known spaces), and most
+# users probably write blog posts rather than pages in their space (see the `include-blogposts`
+# flag), but you'd like to grab someone's page content in their personal space (e.g.,
+# https://redbubble.atlassian.net/wiki/spaces/~anuj.luthra/overview), this will be helpful.  You can
+# combine this setting with your list of `spaces` above to only scrape particular users' spaces,
+# you'll need to add their space key (e.g., the bit with the tilde in spaces/~username/overview) and
+# you can find the entire list as usual with `confluence-dump spaces list
+# --include-personal-spaces`).
+#
+# (default: false)
+include-personal-spaces: true
 
 # Configure your API connection to Confluence.  You'll need to get hold of an API token at
 # https://id.atlassian.com/manage-profile/security/api-tokens, then store it safely.  Then, provide

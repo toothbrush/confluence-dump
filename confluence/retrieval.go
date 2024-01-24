@@ -7,13 +7,19 @@ import (
 	"time"
 )
 
-func (api API) ListAllSpaces(ctx context.Context, orgName string) (map[string]Space, error) {
+func (api API) ListAllSpaces(ctx context.Context, orgName string, includePersonal bool) (map[string]Space, error) {
 	spaces := map[string]Space{}
 
 	query := SpacesQuery{
-		// TODO: feature: do something sensible with "personal spaces"
-		Type:  "global", // can be "personal", too... Or nil for both!
 		Limit: 10,
+	}
+
+	if !includePersonal {
+		// Logic here is a bit confusing.  The `type` parameter may be "global", "personal", or
+		// nothing at all for both.  "global" will return spaces like DRE, CORE, etc., while
+		// "personal" returns each user's space.  Leaving it empty gives us everything, so we only
+		// set this if we _do not_ intend to include personal spaces in our query.
+		query.Type = "global"
 	}
 
 	for {

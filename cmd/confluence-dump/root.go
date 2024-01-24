@@ -114,6 +114,7 @@ type YamlConfig struct {
 	AllSpaces        *bool `yaml:"all-spaces"`
 	IncludeArchived  *bool `yaml:"include-archived"`
 	IncludeBlogposts *bool `yaml:"include-blogposts"`
+	IncludePersonal  *bool `yaml:"include-personal-spaces"`
 	WriteMarkdown    *bool `yaml:"write-markdown"`
 	Prune            *bool `yaml:"prune"`
 

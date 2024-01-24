@@ -93,6 +93,7 @@ var (
 	WriteMarkdown    bool
 	Prune            bool
 	IncludeArchived  bool
+	IncludePersonal  bool
 
 	Spaces []string
 
@@ -111,6 +112,7 @@ func init() {
 	downloadCmd.Flags().BoolVar(&Prune, "prune", true, "prune local Markdown files after download")
 	downloadCmd.Flags().BoolVar(&IncludeArchived, "include-archived", false, "include archived content")
 	downloadCmd.Flags().BoolVar(&IncludeBlogposts, "include-blogposts", false, "download blogposts as well as usual posts")
+	downloadCmd.Flags().BoolVar(&IncludePersonal, "include-personal-spaces", false, "download pages from individuals' personal spaces")
 
 	downloadCmd.PersistentFlags().StringSliceVar(&Spaces, "spaces", []string{}, "list of spaces to scrape")
 	downloadCmd.PersistentFlags().StringSliceVar(&PostDownloadCmd, "post-download-cmd", []string{}, "command to execute after download")
@@ -202,7 +204,7 @@ func runDownload(ctx context.Context) error {
 
 	// list all spaces:
 	log.Println("Listing Confluence spaces...")
-	spacesRemote, err := api.ListAllSpaces(ctx, ConfluenceInstance)
+	spacesRemote, err := api.ListAllSpaces(ctx, ConfluenceInstance, IncludePersonal)
 	if err != nil {
 		return fmt.Errorf("download: couldn't list Confluence spaces: %w", err)
 	}
@@ -253,6 +255,7 @@ func runDownload(ctx context.Context) error {
 		WriteMarkdown:   WriteMarkdown,
 		Prune:           Prune,
 		IncludeArchived: IncludeArchived,
+		IncludePersonal: IncludePersonal,
 	}
 
 	if err := downloader.DownloadConfluenceSpaces(ctx, spacesToDownload); err != nil {
