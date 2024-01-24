@@ -362,6 +362,10 @@ func (downloader *SpacesDownloader) channelSoupRun(ctx context.Context, jobs []J
 		),
 	)
 
+	// hacky stats - pretend this is just for page download jobs
+	pagesConsidered := 0
+	pagesCached := 0
+	pagesFetched := 0
 	// print our results
 	grp.Go(func() error {
 		for {
@@ -372,6 +376,17 @@ func (downloader *SpacesDownloader) channelSoupRun(ctx context.Context, jobs []J
 					return nil
 				}
 				// ok means the channel isn't closed yet
+
+				if result.JobType == PageFetch {
+					pagesConsidered += 1
+					switch result.pageDownloadOutcome {
+					case SuccessfulDownload:
+						pagesFetched += 1
+
+					case SkippedCached:
+						pagesCached += 1
+					}
+				}
 
 				if result.finished {
 					bar.Increment()
@@ -391,6 +406,10 @@ func (downloader *SpacesDownloader) channelSoupRun(ctx context.Context, jobs []J
 
 	// wait for our bar to complete and flush
 	p.Wait()
+
+	if pagesConsidered > 0 {
+		downloader.Logger.Printf("Scanned %d pages, %d cached/skip, %d fetched.\n", pagesConsidered, pagesCached, pagesFetched)
+	}
 
 	return nil
 }
