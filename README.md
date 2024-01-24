@@ -10,9 +10,9 @@ It has many rough edges still, but here's roughly how you can use it:
    `pass` password manager.
 1. Install the tool: `go install github.com/toothbrush/confluence-dump/cmd/confluence-dump@latest`
 1. Create a rudimentary config file at `~/.config/confluence-dump.yaml` (or elsewhere with the
-   `--config` flag) and populate it.  For now the only documentation is the example config file in
-   this repo.
-1. Run it! `./confluence-dump download` 🎉
+   `--config` flag) and populate it.  For now the only documentation is [the example config file in
+   this repo](./confluence-dump.yaml).
+1. Run it! `confluence-dump download` 🎉
 
 ## TODO
 
