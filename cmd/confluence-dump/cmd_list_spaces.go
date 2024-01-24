@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -54,9 +55,19 @@ If you want to find out what spaces your Confluence wiki has, use this command.
 
 		log.Printf("Found %d spaces on '%s'.\n", len(spacesRemote), ConfluenceInstance)
 
-		fmt.Printf("spaces:\n")
+		spaceKeys := []string{}
+
 		for _, space := range spacesRemote {
-			fmt.Printf("  - %s: %s\n", space.Key, space.Name)
+			spaceKeys = append(spaceKeys, space.Key)
+		}
+
+		sort.Strings(spaceKeys)
+
+		fmt.Printf("spaces:\n")
+		for _, spaceKey := range spaceKeys {
+			if s, ok := spacesRemote[spaceKey]; ok {
+				fmt.Printf("  - %s: %s\n", spaceKey, s.Name)
+			}
 		}
 
 		return nil
