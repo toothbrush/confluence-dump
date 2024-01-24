@@ -95,7 +95,7 @@ func runDownload(ctx context.Context) error {
 	log := log.New(os.Stderr, "[confluence-dump] ", 0)
 
 	if LocalStore == "" {
-		return fmt.Errorf("download: no location for local store.  Use --store or set it in your config file")
+		return fmt.Errorf("download: no location for local store; use --store or set in config file")
 	}
 
 	storePath, err := homedir.Expand(LocalStore)
