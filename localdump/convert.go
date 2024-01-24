@@ -9,12 +9,47 @@ import (
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	mdplugin "github.com/JohannesKaufmann/html-to-markdown/plugin"
+	"github.com/PuerkitoBio/goquery"
 	"github.com/toothbrush/confluence-dump/confluence"
 	"gopkg.in/yaml.v3"
 )
 
 func (downloader *SpacesDownloader) ConvertToMarkdown(content *confluence.Page) (LocalMarkdown, error) {
-	converter := md.NewConverter("", true, nil)
+	// Oh my, this is pretty awful.  md.NewConverter should really accept a BaseURI but actually it
+	// only accepts a hostname.  So we have this hack, adapted from:
+	// https://github.com/JohannesKaufmann/html-to-markdown/issues/44
+	opt := &md.Options{
+		GetAbsoluteURL: func(selec *goquery.Selection, rawURL string, domain string) string {
+			// Function `DefaultGetAbsoluteURL` copied from
+			// https://github.com/JohannesKaufmann/html-to-markdown, for us to be able to mess with
+			// u.Scheme in this block.
+			if domain == "" {
+				return rawURL
+			}
+
+			u, err := url.Parse(rawURL)
+			if err != nil {
+				// we can't do anything with this url because it is invalid
+				return rawURL
+			}
+
+			if u.Scheme == "data" {
+				// this is a data uri (for example an inline base64 image)
+				return rawURL
+			}
+
+			if u.Scheme == "" {
+				u.Scheme = downloader.API.BaseURI.Scheme
+			}
+			if u.Host == "" {
+				u.Host = domain // this comes from the first arg to md.NewConverter
+			}
+
+			return u.String()
+		},
+	}
+
+	converter := md.NewConverter(downloader.API.BaseURI.Host, true, opt)
 	// Github flavoured Markdown knows about tables 👍
 	converter.Use(mdplugin.GitHubFlavored())
 	if content.Body.View == nil {
