@@ -44,7 +44,7 @@ var (
 func versionRun(cmd *cobra.Command, args []string) error {
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
-		return fmt.Errorf("Could not read build info")
+		return fmt.Errorf("cmd_version: could not read build info")
 	}
 	for _, kv := range info.Settings {
 		switch kv.Key {
