@@ -5,22 +5,6 @@
 # the --config flag when executing confluence-dump.
 
 ## Settings
-#
-# Always redownload / rewrite files to filesystem, even if they look up-to-date.  Useful if you're
-# monkeying with the Markdown output format.
-#
-# (default: false)
-# always-download: true
-
-# VCR replays API requests.  If you enable it, the first request will hit the API server, subsequent
-# requests will be served lightning-fast from your local.  Definitely *do not* commit the VCR file,
-# it probably contains all your company's secrets.
-#
-# Note that if something went wrong, you might have a cached response in the "cassettes" that you
-# don't want.  Just trash the fixtures/ folder and try again.
-#
-# (default: false)
-# with-vcr: true
 
 # Grab all available spaces, rather than relying on the list in `spaces`.  This option will take
 # precedence over anything configured in `spaces`.  It can cause a large amount of downloading to
@@ -116,3 +100,24 @@ confluence-instance: redbubble
 post-download-cmd:
   - touch
   - .projectile
+
+## Debug / development-mode options
+##
+## You probably won't want to use these, but they're options, so i'm documenting them.
+
+# Always redownload / rewrite files to filesystem, even if they look up-to-date.  Useful if you're
+# monkeying with the Markdown output format.
+#
+# (default: false)
+# always-download: true
+
+# VCR replays API requests.  If you enable it, the first request will hit the API server, subsequent
+# requests will be served lightning-fast from your local.  Definitely *do not* commit the VCR file,
+# it will contain all your company's secrets.  This is just a way to speed up your local dev
+# experience.
+#
+# Note that if something went wrong, you might have a cached response in the "cassettes" that you
+# don't want.  Just trash the fixtures/ folder and try again.
+#
+# (default: false)
+# with-vcr: true
