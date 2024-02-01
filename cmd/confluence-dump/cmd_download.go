@@ -237,6 +237,10 @@ func runDownload(ctx context.Context) error {
 		)
 	}
 
+	if len(spacesToDownload) == 0 {
+		return fmt.Errorf("cmd_download: no spaces selected, nothing to do")
+	}
+
 	log.Println("Enqueuing for download:")
 	for _, space := range spacesToDownload {
 		log.Printf("  - %s: %s\n", space.Key, space.Name)
