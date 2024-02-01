@@ -27,6 +27,8 @@ type SpacesDownloader struct {
 	IncludeArchived bool
 	IncludePersonal bool
 
+	Debug bool
+
 	Logger   *log.Logger
 	loggerMu sync.Mutex
 
@@ -392,7 +394,9 @@ func (downloader *SpacesDownloader) channelSoupRun(ctx context.Context, jobs []J
 				if result.finished {
 					bar.Increment()
 				}
-				// downloader.printJobResults(result, unitsOfWorkRemaining, unitsOfWorkTotal)
+				if downloader.Debug {
+					downloader.printJobResults(result, unitsOfWorkRemaining, unitsOfWorkTotal)
+				}
 
 			case <-gctx.Done():
 				return context.Cause(ctx)

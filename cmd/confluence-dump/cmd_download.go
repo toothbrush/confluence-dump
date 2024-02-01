@@ -252,6 +252,7 @@ func runDownload(ctx context.Context) error {
 		Logger:          log,
 		AlwaysDownload:  AlwaysDownload,
 		API:             api,
+		Debug:           Debug,
 		WriteMarkdown:   WriteMarkdown,
 		Prune:           Prune,
 		IncludeArchived: IncludeArchived,
