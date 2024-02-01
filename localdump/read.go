@@ -112,6 +112,7 @@ type MarkdownHeader struct {
 	Title         string
 	Timestamp     time.Time
 	Version       int
+	Author        string
 	ObjectID      int `yaml:"object_id"`
 	URI           string
 	Status        string

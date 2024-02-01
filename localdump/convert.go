@@ -115,6 +115,10 @@ func (downloader *SpacesDownloader) ConvertToMarkdown(content *confluence.Page) 
 		AncestorIDs:   ancestorIDs,
 	}
 
+	if author, ok := downloader.authorMetadata[content.AuthorID]; ok {
+		header.Author = fmt.Sprintf("%s <%s>", author.DisplayName, author.Email)
+	}
+
 	yamlHeader, err := yaml.Marshal(header)
 	if err != nil {
 		return LocalMarkdown{}, fmt.Errorf("localdump: Couldn't marshal header YAML: %w", err)
