@@ -134,6 +134,7 @@ func runDownload(ctx context.Context) error {
 
 	storePathInfo, err := os.Stat(storePath)
 	if os.IsNotExist(err) {
+		log.Printf("Store '%s' doesn't exist, creating.\n", storePath)
 		if err := os.Mkdir(storePath, os.FileMode(0755)); err != nil {
 			return fmt.Errorf("download: failed to create directory %s: %w", storePath, err)
 		}
