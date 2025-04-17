@@ -382,6 +382,7 @@ func (downloader *SpacesDownloader) channelSoupRun(ctx context.Context, jobs []J
 							return fmt.Errorf("downloader.performJob: retries exceeded: %w", err)
 						}
 						job.retries++
+						fmt.Printf("hit error %d on %v\n", job.retries, job)
 						result = JobResult{
 							JobType:     job.JobType,
 							followUpJob: &job,
