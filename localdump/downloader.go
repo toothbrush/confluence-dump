@@ -53,6 +53,7 @@ const (
 	PagesList JobType = iota
 	PageFetch
 	UserFetch
+	FolderFetch
 )
 
 type Job struct {
@@ -73,6 +74,9 @@ type Job struct {
 
 	// Or, if UserFetch:
 	GetUserQuery confluence.GetUserByIDQuery
+
+	// Or, if FolderFetch:
+	FolderID int
 }
 
 func (downloader *SpacesDownloader) DownloadConfluenceSpaces(ctx context.Context, spaces []confluence.Space) error {
@@ -104,6 +108,20 @@ func (downloader *SpacesDownloader) DownloadConfluenceSpaces(ctx context.Context
 	downloader.Logger.Printf("...found %d total pages across %d spaces\n",
 		len(downloader.remotePageMetadata),
 		len(downloader.spacesMetadata))
+
+	downloader.Logger.Println("Fetching folders...")
+	folderJobs, err := downloader.generateFolderFetchJobs(ctx)
+	if err != nil {
+		return fmt.Errorf("localdump: couldn't generate folder-fetch jobs: %w", err)
+	}
+
+	if len(folderJobs) > 0 {
+		if err := downloader.channelSoupRun(ctx, folderJobs, downloader.Workers*100, "folders"); err != nil {
+			return fmt.Errorf("localdump: failed to process folder-fetch jobs: %w", err)
+		}
+	} else {
+		downloader.Logger.Println("...no folders to fetch")
+	}
 
 	// set up ancestry cache for quick staleness check:
 	if err := downloader.BuildCacheFromPagelist(); err != nil {
@@ -149,6 +167,11 @@ func (downloader *SpacesDownloader) DownloadConfluenceSpaces(ctx context.Context
 func (downloader *SpacesDownloader) generateUserFetchJobs(ctx context.Context) ([]Job, error) {
 	jobs := make(map[string]Job) // to weed out dupes
 	for _, s := range downloader.remotePageMetadata {
+		if s.Page.ContentType == confluence.FolderContent {
+			// no author for folders
+			continue
+		}
+
 		id := s.Page.AuthorID
 
 		if _, ok := jobs[id]; ok {
@@ -211,6 +234,11 @@ func (downloader *SpacesDownloader) generateSinglePageDownloadJobs(ctx context.C
 	jobs := []Job{}
 
 	for _, p := range downloader.remotePageMetadata {
+		if p.Page.ContentType == confluence.FolderContent {
+			// not a real page
+			continue
+		}
+
 		// create initial PageQuery, and pop it in the job queue.
 		// figure out space key this page belongs to:
 		spaceID := p.Page.SpaceID
@@ -233,6 +261,28 @@ func (downloader *SpacesDownloader) generateSinglePageDownloadJobs(ctx context.C
 		jobs = append(jobs, pageDownloadJob)
 	}
 
+	return jobs, nil
+}
+
+func (downloader *SpacesDownloader) generateFolderFetchJobs(ctx context.Context) ([]Job, error) {
+	var jobs []Job
+	for _, metadata := range downloader.remotePageMetadata {
+		page := metadata.Page
+		if page.ParentType == "folder" {
+			if _, exists := downloader.remotePageMetadata[ContentID(page.ParentID)]; !exists {
+				folderID, err := strconv.Atoi(page.ParentID)
+				if err != nil {
+					return nil, fmt.Errorf("folder id conversion failed for %s: %w", page.ParentID, err)
+				}
+				jobs = append(jobs, Job{
+					JobType:  FolderFetch,
+					FolderID: folderID,
+					Org:      page.Org,
+					SpaceKey: page.SpaceKey,
+				})
+			}
+		}
+	}
 	return jobs, nil
 }
 
@@ -265,6 +315,20 @@ func (downloader *SpacesDownloader) performJob(ctx context.Context, job Job) (Jo
 			return JobResult{}, fmt.Errorf("downloader: Confluence download failed: %w", err)
 		}
 		return userResult, nil
+
+	case FolderFetch:
+		folderResult, err := downloader.performFolderDownloadJob(ctx, job)
+		if err != nil {
+			return JobResult{}, fmt.Errorf("downloader: folder download failed: %w", err)
+		}
+		// update freshLocalFiles
+		downloader.remoteMetadataMu.Lock()
+		defer downloader.remoteMetadataMu.Unlock()
+		if downloader.freshLocalFiles == nil {
+			downloader.freshLocalFiles = make(map[string]bool)
+		}
+		downloader.freshLocalFiles[string(folderResult.page.RelativePath)] = true
+		return folderResult, nil
 
 	default:
 		return JobResult{}, fmt.Errorf("downloader: unreachable case jobType = %d", job.JobType)
@@ -317,7 +381,6 @@ func (downloader *SpacesDownloader) channelSoupRun(ctx context.Context, jobs []J
 							return fmt.Errorf("downloader.performJob: retries exceeded: %w", err)
 						}
 						job.retries++
-						fmt.Printf("hit error %d on %v\n", job.retries, job)
 						result = JobResult{
 							JobType:     job.JobType,
 							followUpJob: &job,
@@ -485,6 +548,10 @@ func (downloader *SpacesDownloader) performPageListJob(ctx context.Context, job 
 		if _, ok := downloader.remotePageMetadata[ContentID(p.ID)]; ok {
 			return JobResult{}, fmt.Errorf("localdump: received duplicate ID %s from API", p.ID)
 		}
+		// handle folders, which don't have this metadata
+		p.SpaceKey = job.SpaceKey
+		p.Org = job.Org
+
 		p.ContentType = job.GetPagesQuery.QueryType
 		downloader.remotePageMetadata[ContentID(p.ID)] = RemoteObjectMetadata{
 			Page: p,
@@ -603,6 +670,59 @@ func (downloader *SpacesDownloader) performPageDownloadJob(ctx context.Context, 
 	result.Org = job.Org
 
 	markdown, err := downloader.ConvertToMarkdown(result)
+	if err != nil {
+		return JobResult{}, fmt.Errorf("localdump: convert to Markdown failed: %w", err)
+	}
+
+	if err = downloader.WriteMarkdownIntoLocal(markdown); err != nil {
+		return JobResult{}, fmt.Errorf("localdump: failed writing file: %w", err)
+	}
+
+	return JobResult{
+		JobType: job.JobType,
+		space:   job.SpaceKey,
+
+		followUpJob: nil,
+		finished:    true,
+		itemsFound:  1,
+
+		page:                &markdown,
+		pageDownloadOutcome: SuccessfulDownload,
+	}, nil
+}
+
+func (downloader *SpacesDownloader) performFolderDownloadJob(ctx context.Context, job Job) (JobResult, error) {
+	folder, err := downloader.API.GetFolderByID(ctx, confluence.GetFolderByIDQuery{ID: job.FolderID})
+	if err != nil {
+		return JobResult{}, err
+	}
+
+	// Folders aren't pages, but we can treat them as blank ones.
+	dummyPage := confluence.Page{
+		ID:          strconv.Itoa(job.FolderID),
+		Title:       folder.Title,
+		ContentType: confluence.FolderContent,
+		SpaceKey:    job.SpaceKey,
+		Org:         job.Org,
+		Status:      "current",
+		Version: &confluence.Version{
+			Number:    1,
+			CreatedAt: time.Now().Format(time.RFC3339),
+		},
+	}
+	dummyPage.Body.View = &confluence.Storage{
+		Representation: "view",
+		Value:          "",
+	}
+	dummyPage.Links.WebUI = fmt.Sprintf("/folders/%d", job.FolderID)
+
+	downloader.remoteMetadataMu.Lock()
+	downloader.remotePageMetadata[ContentID(dummyPage.ID)] = RemoteObjectMetadata{
+		Page: dummyPage,
+	}
+	downloader.remoteMetadataMu.Unlock()
+
+	markdown, err := downloader.ConvertToMarkdown(&dummyPage)
 	if err != nil {
 		return JobResult{}, fmt.Errorf("localdump: convert to Markdown failed: %w", err)
 	}

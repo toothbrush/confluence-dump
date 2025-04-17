@@ -59,6 +59,12 @@ type Page struct {
 	ContentType ContentType
 }
 
+// Folder represents a Confluence folder (just organises other pages)
+type Folder struct {
+	ID    string `json:"id,omitempty"`
+	Title string `json:"title,omitempty"`
+}
+
 // Version defines the content version number
 // the version number is used for updating content
 type Version struct {
@@ -87,12 +93,16 @@ type ContentType int
 const (
 	PageContent ContentType = iota
 	BlogContent
+	FolderContent
 )
 
 func (c ContentType) String() string {
-	if c == BlogContent {
+	switch c {
+	case BlogContent:
 		return "blogpost"
-	} else {
+	case FolderContent:
+		return "folder"
+	default:
 		return "page"
 	}
 }

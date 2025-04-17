@@ -58,3 +58,13 @@ type GetPageByIDQuery struct {
 type GetUserByIDQuery struct {
 	ID string `url:"accountId"` // ID of the user; required
 }
+
+// GetFolderByIDQuery defines the query parameters for:
+// https://developer.atlassian.com/cloud/confluence/rest/v2/api-group-folder/#api-folders-id-get
+type GetFolderByIDQuery struct {
+	ID                    int  `url:"-"` // ID of the folder; required
+	IncludeCollaborators  bool `url:"include-collaborators,omitempty"`
+	IncludeDirectChildren bool `url:"include-direct-children,omitempty"`
+	IncludeOperations     bool `url:"include-operations,omitempty"`
+	IncludeProperties     bool `url:"include-properties,omitempty"`
+}

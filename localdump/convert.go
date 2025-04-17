@@ -65,6 +65,9 @@ func (downloader *SpacesDownloader) ConvertToMarkdown(content *confluence.Page) 
 		return LocalMarkdown{}, fmt.Errorf("localdump: generated URL is bunk: %w", err)
 	}
 
+	downloader.remoteMetadataMu.Lock()
+	defer downloader.remoteMetadataMu.Unlock()
+
 	// Are we able to set a base for all URLs?  Currently the Markdown has things like
 	// '/wiki/spaces/DRE/pages/2946695376/Tools+and+Infrastructure' which are a bit un ergonomic.
 	// we could (fancy mode) resolve to a link in the local dump or (grug mode) just add the

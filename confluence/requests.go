@@ -69,6 +69,24 @@ func (api *API) GetPageByID(ctx context.Context, opts GetPageByIDQuery) (*Page, 
 	return &page, nil
 }
 
+func (api *API) GetFolderByID(ctx context.Context, opts GetFolderByIDQuery) (*Folder, error) {
+	ep, err := api.getFolderByIDEndpoint(opts)
+	if err != nil {
+		return nil, fmt.Errorf("confluence: couldn't get folder endpoint: %w", err)
+	}
+
+	body, err := api.request(ctx, ep)
+	if err != nil {
+		return nil, fmt.Errorf("confluence: couldn't perform request: %w", err)
+	}
+
+	var folder Folder
+	if err := json.Unmarshal(body, &folder); err != nil {
+		return nil, fmt.Errorf("confluence: couldn't parse json response: %w", err)
+	}
+	return &folder, nil
+}
+
 func (api *API) GetBlogPosts(ctx context.Context, opts GetPagesQuery) (*MultiPageResponse, error) {
 	ep, err := api.getBlogPostsEndpoint(opts)
 	if err != nil {
