@@ -173,11 +173,6 @@ func (downloader *SpacesDownloader) DownloadConfluenceSpaces(ctx context.Context
 func (downloader *SpacesDownloader) generateUserFetchJobs(ctx context.Context) ([]Job, error) {
 	jobs := make(map[string]Job) // to weed out dupes
 	for _, s := range downloader.remotePageMetadata {
-		if s.Page.ContentType == confluence.FolderContent {
-			// no author for folders
-			continue
-		}
-
 		id := s.Page.AuthorID
 
 		if _, ok := jobs[id]; ok {
