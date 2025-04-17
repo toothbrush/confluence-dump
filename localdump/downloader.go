@@ -109,18 +109,24 @@ func (downloader *SpacesDownloader) DownloadConfluenceSpaces(ctx context.Context
 		len(downloader.remotePageMetadata),
 		len(downloader.spacesMetadata))
 
-	downloader.Logger.Println("Fetching folders...")
-	folderJobs, err := downloader.generateFolderFetchJobs(ctx)
-	if err != nil {
-		return fmt.Errorf("localdump: couldn't generate folder-fetch jobs: %w", err)
-	}
+	// fetch arbitrarily deep folder structures
+	for {
+		downloader.Logger.Println("Scanning for folder‐parent IDs...")
+		folderJobs, err := downloader.generateFolderFetchJobs(ctx)
+		if err != nil {
+			return fmt.Errorf("localdump: couldn't generate folder‐fetch jobs: %w", err)
+		}
 
-	if len(folderJobs) > 0 {
-		if err := downloader.channelSoupRun(ctx, folderJobs, downloader.Workers*100, "folders"); err != nil {
+		if len(folderJobs) == 0 {
+			downloader.Logger.Println("...no more folders to fetch")
+			break
+		}
+
+		downloader.Logger.Printf("...fetching %d folder(s)\n", len(folderJobs))
+
+		if err := downloader.channelSoupRun(ctx, folderJobs, len(folderJobs), "folders"); err != nil {
 			return fmt.Errorf("localdump: failed to process folder-fetch jobs: %w", err)
 		}
-	} else {
-		downloader.Logger.Println("...no folders to fetch")
 	}
 
 	// set up ancestry cache for quick staleness check:
@@ -702,7 +708,7 @@ func (downloader *SpacesDownloader) performFolderDownloadJob(ctx context.Context
 		ID:          strconv.Itoa(job.FolderID),
 		Status:      folder.Status,
 		Title:       folder.Title,
-		SpaceID:     job.SpaceKey,
+		SpaceID:     "folders",
 		ParentID:    folder.ParentID,
 		ParentType:  folder.ParentType,
 		Position:    folder.Position,
