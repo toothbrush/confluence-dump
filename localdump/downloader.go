@@ -700,21 +700,37 @@ func (downloader *SpacesDownloader) performFolderDownloadJob(ctx context.Context
 	// Folders aren't pages, but we can treat them as blank ones.
 	dummyPage := confluence.Page{
 		ID:          strconv.Itoa(job.FolderID),
+		Status:      folder.Status,
 		Title:       folder.Title,
-		ContentType: confluence.FolderContent,
-		SpaceKey:    job.SpaceKey,
-		Org:         job.Org,
-		Status:      "current",
-		Version: &confluence.Version{
-			Number:    1,
-			CreatedAt: time.Now().Format(time.RFC3339),
+		SpaceID:     job.SpaceKey,
+		ParentID:    folder.ParentID,
+		ParentType:  folder.ParentType,
+		Position:    folder.Position,
+		AuthorID:    folder.AuthorID,
+		OwnerID:     folder.OwnerID,
+		LastOwnerID: folder.OwnerID,
+
+		CreatedAt: folder.CreatedAt.String(),
+		Version:   folder.Version,
+
+		Body: confluence.Body{
+			View: &confluence.Storage{
+				Representation: "view", // I guess?
+				Value:          "",
+			},
 		},
+
+		Links: struct {
+			WebUI  string `json:"webui"`
+			EditUI string `json:"editui"`
+			TinyUI string `json:"tinyui"`
+		}{WebUI: folder.Links.WebUI, EditUI: "", TinyUI: ""},
+
+		SpaceKey: job.SpaceKey,
+		Org:      job.Org,
+
+		ContentType: confluence.FolderContent,
 	}
-	dummyPage.Body.View = &confluence.Storage{
-		Representation: "view",
-		Value:          "",
-	}
-	dummyPage.Links.WebUI = fmt.Sprintf("/folders/%d", job.FolderID)
 
 	downloader.remoteMetadataMu.Lock()
 	downloader.remotePageMetadata[ContentID(dummyPage.ID)] = RemoteObjectMetadata{
