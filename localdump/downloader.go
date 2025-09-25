@@ -660,7 +660,7 @@ func (downloader *SpacesDownloader) performPageDownloadJob(ctx context.Context, 
 		}, nil
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
 	result, err := downloader.getPageOrBlog(ctx, job)
