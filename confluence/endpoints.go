@@ -70,6 +70,26 @@ func (a *API) getPageByIDEndpoint(opts GetPageByIDQuery) (*url.URL, error) {
 	return ep, nil
 }
 
+// getFolderByIDEndpoint returns the (v2) API endpoint to download a folder:
+// https://developer.atlassian.com/cloud/confluence/rest/v2/api-group-folder/#api-folders-id-get
+func (a *API) getFolderByIDEndpoint(opts GetFolderByIDQuery) (*url.URL, error) {
+	if opts.ID < 1 {
+		return nil, fmt.Errorf("confluence: please provide folder ID")
+	}
+
+	ep, err := a.resolveEndpoint(fmt.Sprintf("/wiki/api/v2/folders/%d", opts.ID))
+	if err != nil {
+		return nil, fmt.Errorf("confluence: couldn't resolve folder endpoint: %w", err)
+	}
+
+	v, err := query.Values(opts)
+	if err != nil {
+		return nil, fmt.Errorf("confluence: couldn't encode query params: %w", err)
+	}
+	ep.RawQuery = v.Encode()
+	return ep, nil
+}
+
 // getBlogPostsEndpoint returns the (v2) API endpoint to list pages
 // https://developer.atlassian.com/cloud/confluence/rest/v2/api-group-blog-post/#api-blogposts-get
 func (a *API) getBlogPostsEndpoint(opts GetPagesQuery) (*url.URL, error) {

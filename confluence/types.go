@@ -1,5 +1,7 @@
 package confluence
 
+import "encoding/json"
+
 // See https://developer.atlassian.com/cloud/confluence/rest/v1/api-group-users/#api-wiki-rest-api-user-get
 type User struct {
 	Type        string `json:"type"`
@@ -59,6 +61,38 @@ type Page struct {
 	ContentType ContentType
 }
 
+// Folder represents a Confluence folder (just organises other pages)
+// Very similar to a page, but non-existent fields have been commented out
+type Folder struct {
+	ID     string `json:"id,omitempty"`
+	Status string `json:"status,omitempty"` // current, archived, deleted, trashed
+	Title  string `json:"title,omitempty"`
+	//SpaceID     string `json:"spaceId,omitempty"`
+	ParentID   string `json:"parentId,omitempty"`
+	ParentType string `json:"parentType,omitempty"`
+	Position   int    `json:"position,omitempty"`
+	AuthorID   string `json:"authorId,omitempty"`
+	OwnerID    string `json:"ownerId,omitempty"`
+	//LastOwnerID string `json:"lastOwnerId,omitempty"`
+
+	// The API docs claim this is a string in "YYYY-MM-DDTHH:mm:ss.sssZ" format, but this is a lie
+	CreatedAt json.Number `json:"createdAt"`
+	Version   *Version    `json:"version,omitempty"`
+
+	//Body Body `json:"body"`
+
+	Links struct {
+		WebUI string `json:"webui"`
+		//EditUI string `json:"editui"`
+		//TinyUI string `json:"tinyui"`
+	} `json:"_links"`
+
+	SpaceKey string
+	Org      string
+
+	ContentType ContentType
+}
+
 // Version defines the content version number
 // the version number is used for updating content
 type Version struct {
@@ -87,12 +121,16 @@ type ContentType int
 const (
 	PageContent ContentType = iota
 	BlogContent
+	FolderContent
 )
 
 func (c ContentType) String() string {
-	if c == BlogContent {
+	switch c {
+	case BlogContent:
 		return "blogpost"
-	} else {
+	case FolderContent:
+		return "folder"
+	default:
 		return "page"
 	}
 }
